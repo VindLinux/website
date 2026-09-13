@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="color-scheme" content="dark">
+    <title>Boot and Post-Smoke Test - x86_64 Handbook - Vind Linux</title>
+    <link rel="stylesheet" href="../../../assets/style.css">
+</head>
+<body>
+    <header>
+        <a href="/">← Vind Linux</a>
+    </header>
+
+    <nav class="chapter-bar">
+        <a href="/docs/handbooks/x86_64/bootloader.html" class="chapter-nav">‹ Prev</a>
+        <div class="chapter-heading">
+            <span class="chapter-num">Chapter 13</span>
+            <h2>Boot and Post-Smoke Test</h2>
+        </div>
+        <a href="#" class="chapter-nav is-disabled">Next ›</a>
+    </nav>
+
+    <main>
+
+        <section>
+            <h3>13.1. Leave the chroot and boot</h3>
+
+            <pre><code>exit
+umount -R /mnt/vind/dev /mnt/vind/proc /mnt/vind/sys /mnt/vind/run
+swapoff /dev/vda2
+umount -R /mnt/vind
+reboot</code></pre>
+
+            <p>
+                Pull the install media before it restarts so the firmware
+                boots from <code>/dev/vda</code>.
+            </p>
+        </section>
+
+        <section>
+            <h3>13.2. Post-boot smoke test</h3>
+
+            <p>
+                Quick checklist to run once it's up — each line pokes at a
+                different piece, so if something fails you know roughly
+                where to look:
+            </p>
+
+            <pre><code>whoami                        # user database is sane (root resolves)
+uname -a                      # confirms the kernel that's actually running
+mount | grep vda3             # root is mounted from the right partition
+ip addr show                  # dhcpcd brought an interface up
+cat /etc/resolv.conf          # DNS config is in place
+date                          # clock is sane, not 1970 or decades off
+ping -c 1 1.1.1.1              # network reaches the outside world
+curl -sI https://github.com   # TLS trust chain works end to end
+gcc --version 2>&1 | head -1  # should fail — gcc isn't a real binary here
+clang --version               # Clang is the live compiler
+lambda --help                 # package manager is intact post-reboot
+sv status dhcpcd ntpsync      # both services are up under runit</code></pre>
+
+            <p>
+                If all of that checks out, you're good — toolchain,
+                package manager, networking, time, and TLS trust are all
+                actually working together, not just sitting on disk.
+            </p>
+        </section>
+
+    </main>
+
+    <nav class="chapter-bar chapter-bar-bottom">
+        <a href="/docs/handbooks/x86_64/bootloader.html" class="chapter-nav">‹ Prev</a>
+        <div class="chapter-heading">
+            <span class="chapter-num">Chapter 13</span>
+            <h2>Boot and Post-Smoke Test</h2>
+        </div>
+        <a href="#" class="chapter-nav is-disabled">Next ›</a>
+    </nav>
+
+    <footer>
+        <a href="/">Home</a>
+        <a href="/docs/">Documentation</a>
+        <a href="/docs/handbooks/x86_64/">x86_64 Handbook</a>
+        <a href="/license/">License</a>
+    </footer>
+</body>
+</html>

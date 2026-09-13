@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="color-scheme" content="dark">
+    <title>Filesystems - x86_64 Handbook - Vind Linux</title>
+    <link rel="stylesheet" href="../../../assets/style.css">
+</head>
+<body>
+    <header>
+        <a href="/">← Vind Linux</a>
+    </header>
+
+    <nav class="chapter-bar">
+        <a href="/docs/handbooks/x86_64/partition-and-mount.html" class="chapter-nav">‹ Prev</a>
+        <div class="chapter-heading">
+            <span class="chapter-num">Chapter 3</span>
+            <h2>Filesystems</h2>
+        </div>
+        <a href="/docs/handbooks/x86_64/base-system-and-chroot.html" class="chapter-nav">Next ›</a>
+    </nav>
+
+    <main>
+
+        <section>
+            <p>
+                For <code>/</code> (and <code>/home</code> if you're
+                splitting it out), pick one:
+            </p>
+
+            <ul>
+                <li><strong>ext4</strong> — the boring, safe default. Mature, simple, no moving parts to think about. Go with this if you don't have a specific reason to want the stuff btrfs offers.</li>
+                <li><strong>btrfs</strong> — copy-on-write, with built-in snapshots, subvolumes, transparent compression, and (if you care) multi-device RAID. Worth it if you actually want snapshots — otherwise it's more moving parts for no benefit.</li>
+            </ul>
+        </section>
+
+        <section>
+            <h3>3.1. ext4, single root</h3>
+
+            <pre><code>mkfs.vfat -F32 /dev/vda1
+mkswap /dev/vda2 && swapon /dev/vda2
+mkfs.ext4 /dev/vda3
+
+mkdir -p /mnt/vind
+mount /dev/vda3 /mnt/vind
+mkdir -p /mnt/vind/boot/efi
+mount /dev/vda1 /mnt/vind/boot/efi</code></pre>
+        </section>
+
+        <section>
+            <h3>3.2. btrfs, with / and /home as separate subvolumes</h3>
+
+            <pre><code>mkfs.vfat -F32 /dev/vda1
+mkswap /dev/vda2 && swapon /dev/vda2
+mkfs.btrfs /dev/vda3
+
+# create the subvolumes
+mount /dev/vda3 /mnt/vind
+btrfs subvolume create /mnt/vind/@
+btrfs subvolume create /mnt/vind/@home
+umount /mnt/vind
+
+# mount them where they actually belong
+mount -o subvol=@ /dev/vda3 /mnt/vind
+mkdir -p /mnt/vind/home /mnt/vind/boot/efi
+mount -o subvol=@home /dev/vda3 /mnt/vind/home
+mount /dev/vda1 /mnt/vind/boot/efi</code></pre>
+
+            <p>
+                If you'd rather keep <code>/home</code> on its own physical
+                partition instead of a subvolume, that's fine too — just
+                add a fourth partition back in the previous chapter and
+                <code>mkfs</code>/mount it at <code>/mnt/vind/home</code>
+                the normal way, same as <code>/boot/efi</code>.
+            </p>
+        </section>
+
+        <section>
+            <p>Whichever path you took, confirm the layout before moving on:</p>
+
+            <pre><code>lsblk
+NAME   MAJ:MIN RM  SIZE RO TYPE MOUNTPOINTS
+vda    253:0    0   50G  0 disk
+├─vda1 253:1    0    1G  0 part /mnt/vind/boot/efi
+├─vda2 253:2    0    4G  0 part [SWAP]
+└─vda3 253:3    0   45G  0 part /mnt/vind</code></pre>
+        </section>
+
+    </main>
+
+    <nav class="chapter-bar chapter-bar-bottom">
+        <a href="/docs/handbooks/x86_64/partition-and-mount.html" class="chapter-nav">‹ Prev</a>
+        <div class="chapter-heading">
+            <span class="chapter-num">Chapter 3</span>
+            <h2>Filesystems</h2>
+        </div>
+        <a href="/docs/handbooks/x86_64/base-system-and-chroot.html" class="chapter-nav">Next ›</a>
+    </nav>
+
+    <footer>
+        <a href="/">Home</a>
+        <a href="/docs/">Documentation</a>
+        <a href="/docs/handbooks/x86_64/">x86_64 Handbook</a>
+        <a href="/license/">License</a>
+    </footer>
+</body>
+</html>

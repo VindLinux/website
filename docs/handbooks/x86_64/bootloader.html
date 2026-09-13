@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="color-scheme" content="dark">
+    <title>Bootloader - x86_64 Handbook - Vind Linux</title>
+    <link rel="stylesheet" href="../../../assets/style.css">
+</head>
+<body>
+    <header>
+        <a href="/">← Vind Linux</a>
+    </header>
+
+    <nav class="chapter-bar">
+        <a href="/docs/handbooks/x86_64/init-system.html" class="chapter-nav">‹ Prev</a>
+        <div class="chapter-heading">
+            <span class="chapter-num">Chapter 12</span>
+            <h2>Bootloader</h2>
+        </div>
+        <a href="/docs/handbooks/x86_64/boot-and-post-smoke-test.html" class="chapter-nav">Next ›</a>
+    </nav>
+
+    <main>
+
+        <section>
+            <p>
+                Pick one. Neither is installed by default — grab whichever
+                you want here, then reconcile.
+            </p>
+        </section>
+
+        <section>
+            <h3>12.1. Option A — GRUB</h3>
+
+            <p>
+                The familiar choice, config-file driven, generates its menu
+                from whatever kernels it finds in <code>/boot</code>.
+            </p>
+
+            <pre><code>lambda mutate append grub efibootmgr
+lambda reconcile
+
+grub-install --target=x86_64-efi --efi-directory=/boot/efi --bootloader-id=VindLinux --removable
+grub-mkconfig -o /boot/grub/grub.cfg</code></pre>
+
+            <p>
+                <code>--removable</code> also installs a fallback path
+                (<code>EFI/BOOT/BOOTX64.EFI</code>) — good to keep on a
+                VM/disk image, drop it on real hardware where a normal
+                NVRAM entry is preferred. Re-run <code>grub-mkconfig</code>
+                any time the kernel changes.
+            </p>
+        </section>
+
+        <section>
+            <h3>12.2. Option B — Limine</h3>
+
+            <p>
+                Lighter, faster, config is a plain text file you write by
+                hand instead of one grub-mkconfig generates for you.
+            </p>
+
+            <pre><code>lambda mutate append limine
+lambda reconcile
+
+mkdir -p /boot/efi/EFI/BOOT
+cp /usr/share/limine/BOOTX64.EFI /boot/efi/EFI/BOOT/BOOTX64.EFI
+
+# IMPORTANT: Always copy your kernel to the EFI partition.
+# Limine can struggle to read kernels directly from Btrfs subvolumes.
+
+cp /boot/vmlinuz-&lt;kernel-version&gt; /boot/efi/EFI/BOOT/vmlinuz-&lt;kernel-version&gt;
+
+cat > /boot/efi/EFI/BOOT/limine.conf << EOF
+# Vind Linux Limine configuration
+
+timeout: 5
+default_entry: 1
+
+/Vind Linux
+    protocol: linux
+    kernel_path: boot():/EFI/BOOT/vmlinuz-&lt;kernel-version&gt;
+    # If using an initramfs, uncomment the line below:
+    # module_path: boot():/EFI/BOOT/initramfs-&lt;kernel-version&gt;.img
+    cmdline: root=UUID=&lt;your-root-uuid&gt; rw
+    # cmdline: root=UUID=&lt;your-root-uuid&gt; rootflags=subvol=@ rw (if using Btrfs)
+EOF</code></pre>
+
+            <p>
+                Replace <code>&lt;kernel-version&gt;</code> with whatever
+                version actually built. If you set up an initramfs, copy
+                its image to <code>/boot/efi/EFI/BOOT/</code> as well and
+                uncomment the <code>module_path</code> line under the
+                entry.
+            </p>
+
+            <p>
+                Limine doesn't scan for kernels the way grub-mkconfig does
+                — you edit <code>/boot/efi/EFI/BOOT/limine.conf</code> by
+                hand whenever the kernel changes. If you want it registered
+                as a proper NVRAM boot entry instead of relying on the
+                fallback path, <code>efibootmgr</code> (from Option A, or
+                installed standalone) still works fine here too.
+            </p>
+        </section>
+
+    </main>
+
+    <nav class="chapter-bar chapter-bar-bottom">
+        <a href="/docs/handbooks/x86_64/init-system.html" class="chapter-nav">‹ Prev</a>
+        <div class="chapter-heading">
+            <span class="chapter-num">Chapter 12</span>
+            <h2>Bootloader</h2>
+        </div>
+        <a href="/docs/handbooks/x86_64/boot-and-post-smoke-test.html" class="chapter-nav">Next ›</a>
+    </nav>
+
+    <footer>
+        <a href="/">Home</a>
+        <a href="/docs/">Documentation</a>
+        <a href="/docs/handbooks/x86_64/">x86_64 Handbook</a>
+        <a href="/license/">License</a>
+    </footer>
+</body>
+</html>

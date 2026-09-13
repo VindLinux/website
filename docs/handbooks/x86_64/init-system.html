@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="color-scheme" content="dark">
+    <title>Init System - x86_64 Handbook - Vind Linux</title>
+    <link rel="stylesheet" href="../../../assets/style.css">
+</head>
+<body>
+    <header>
+        <a href="/">← Vind Linux</a>
+    </header>
+
+    <nav class="chapter-bar">
+        <a href="/docs/handbooks/x86_64/kernel.html" class="chapter-nav">‹ Prev</a>
+        <div class="chapter-heading">
+            <span class="chapter-num">Chapter 11</span>
+            <h2>Init System</h2>
+        </div>
+        <a href="/docs/handbooks/x86_64/bootloader.html" class="chapter-nav">Next ›</a>
+    </nav>
+
+    <main>
+
+        <section>
+            <p>
+                Vind defaults to runit but doesn't force it — swap it for
+                whatever you prefer, just know you're on your own for
+                setup.
+            </p>
+
+            <pre><code>lambda mutate append vind-runit
+lambda reconcile</code></pre>
+        </section>
+
+        <section>
+            <h3>11.1. Wire up dhcpcd and time sync as services</h3>
+
+            <pre><code># dhcpcd needs its privsep user to exist first
+groupadd -r dhcpcd
+useradd -r -g dhcpcd -d /var/lib/dhcpcd -s /sbin/nologin -c 'dhcpcd PrivSep' dhcpcd
+mkdir -p /var/lib/dhcpcd /var/run/dhcpcd
+chown dhcpcd:dhcpcd /var/lib/dhcpcd /var/run/dhcpcd
+
+mkdir -p /etc/sv/dhcpcd/log/main
+cat > /etc/sv/dhcpcd/run << 'EOF'
+#!/bin/sh
+exec 2>&1
+exec dhcpcd --nobackground
+EOF
+chmod +x /etc/sv/dhcpcd/run
+
+cat > /etc/sv/dhcpcd/log/run << 'EOF'
+#!/bin/sh
+exec svlogd -tt ./main
+EOF
+chmod +x /etc/sv/dhcpcd/log/run
+
+ln -sf /etc/sv/dhcpcd /etc/service/dhcpcd
+
+# ntp is one-shot, so the run script does the sync then just sleeps
+mkdir -p /etc/sv/ntpsync
+cat > /etc/sv/ntpsync/run << 'EOF'
+#!/bin/sh
+busybox ntpd -n -q -p pool.ntp.org >/dev/null 2>&1
+exec sleep 999999
+EOF
+chmod +x /etc/sv/ntpsync/run
+
+ln -sf /etc/sv/ntpsync /etc/service/ntpsync</code></pre>
+
+            <p>
+                A couple of things worth knowing if you're curious why it's
+                written this way: <code>--nobackground</code> is required
+                because <code>runsv</code> respawns anything that exits, so
+                a daemon that forks itself into the background looks like a
+                crash. Same idea with the <code>sleep</code> in
+                <code>ntpsync</code> — a one-shot script that just exits
+                looks like a crashing service and gets respawned in a loop.
+                And the <code>log/run</code> script isn't optional once a
+                <code>log/</code> directory exists — <code>runsv</code>
+                expects one and treats a missing one as fatal. Full
+                explanation is in <code>building.md</code> §16.3.1 if you
+                want the details.
+            </p>
+        </section>
+
+    </main>
+
+    <nav class="chapter-bar chapter-bar-bottom">
+        <a href="/docs/handbooks/x86_64/kernel.html" class="chapter-nav">‹ Prev</a>
+        <div class="chapter-heading">
+            <span class="chapter-num">Chapter 11</span>
+            <h2>Init System</h2>
+        </div>
+        <a href="/docs/handbooks/x86_64/bootloader.html" class="chapter-nav">Next ›</a>
+    </nav>
+
+    <footer>
+        <a href="/">Home</a>
+        <a href="/docs/">Documentation</a>
+        <a href="/docs/handbooks/x86_64/">x86_64 Handbook</a>
+        <a href="/license/">License</a>
+    </footer>
+</body>
+</html>

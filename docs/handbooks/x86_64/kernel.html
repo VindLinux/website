@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="color-scheme" content="dark">
+    <title>Boot and Post-Smoke Test - x86_64 Handbook - Vind Linux</title>
+    <link rel="stylesheet" href="../../../assets/style.css">
+</head>
+<body>
+    <header>
+        <a href="/">← Vind Linux</a>
+    </header>
+
+    <nav class="chapter-bar">
+        <a href="/docs/handbooks/x86_64/fstab.html" class="chapter-nav">‹ Prev</a>
+        <div class="chapter-heading">
+            <span class="chapter-num">Chapter 10</span>
+            <h2>Kernel</h2>
+        </div>
+        <a href="/docs/handbooks/x86_64/init-system.html" class="chapter-nav">Next ›</a>
+    </nav>
+
+    <main>
+
+        <section>
+            <h3>10.1. Cloning the repo</h3>
+            <p>
+                Not in the Lambda repo — build it yourself from the 
+                <a href="https://github.com/VindLinux/vind-kernel">Vind Kernel</a> 
+                tree or compile your own:
+            </p>
+
+            <pre><code>git clone --depth 1 --single-branch --branch vind https://github.com/VindLinux/vind-kernel.git</code></pre>
+
+            <p>
+                If everything needed at boot is built into the kernel
+                (not as modules), you don't need an initramfs — skip to
+                the next chapter. If any of it's a `.ko` module, continue:
+            </p>
+        </section>
+
+        <section>
+            <h3>10.2. Initramfs</h3>
+
+            <pre><code># must have dracut or any other option
+lambda mutate append dracut
+
+# depmod must come from kmod, not busybox
+rm -f /usr/bin/depmod
+ln -s /usr/bin/kmod /usr/bin/depmod
+depmod <kernel-version>
+
+# disable i18n unless you need keymap/locale support in the initramfs
+echo 'omit_dracutmodules+=" i18n "' > /etc/dracut.conf.d/no-i18n.conf
+
+# generate the initramfs with DRACUT_LDCONFIG=true
+DRACUT_LDCONFIG=true dracut --force /boot/initramfs-<kernel-version>.img <kernel-version></code></pre>
+
+            <p>
+                You can delete the `vind-kernel` checkout once the kernel's installed — just wait until you've confirmed it actually boots, in case you need to recompile.
+
+                On real hardware (skip on a VM), you'll also want CPU microcode updates (Intel/AMD) picked up by dracut's early-microcode mechanism — not packaged by Lambda yet, so that's on you for now.
+            </p>
+        </section>
+
+    </main>
+
+    <nav class="chapter-bar chapter-bar-bottom">
+        <a href="/docs/handbooks/x86_64/fstab.html" class="chapter-nav">‹ Prev</a>
+        <div class="chapter-heading">
+            <span class="chapter-num">Chapter 10</span>
+            <h2>Kernel</h2>
+        </div>
+        <a href="/docs/handbooks/x86_64/init-system.html" class="chapter-nav">Next ›</a>
+    </nav>
+
+    <footer>
+        <a href="/">Home</a>
+        <a href="/docs/">Documentation</a>
+        <a href="/docs/handbooks/x86_64/">x86_64 Handbook</a>
+        <a href="/license/">License</a>
+    </footer>
+</body>
+</html>

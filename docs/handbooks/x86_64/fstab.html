@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="color-scheme" content="dark">
+    <title>fstab - x86_64 Handbook - Vind Linux</title>
+    <link rel="stylesheet" href="../../../assets/style.css">
+</head>
+<body>
+    <header>
+        <a href="/">← Vind Linux</a>
+    </header>
+
+    <nav class="chapter-bar">
+        <a href="/docs/handbooks/x86_64/networking.html" class="chapter-nav">‹ Prev</a>
+        <div class="chapter-heading">
+            <span class="chapter-num">Chapter 9</span>
+            <h2>fstab</h2>
+        </div>
+        <a href="/docs/handbooks/x86_64/kernel.html" class="chapter-nav">Next ›</a>
+    </nav>
+
+    <main>
+
+        <section>
+            <pre><code>cat > /etc/fstab <<'EOF'
+# &lt;file system&gt;   &lt;mount point&gt;  &lt;type&gt;  &lt;options&gt;        &lt;dump&gt; &lt;pass&gt;
+/dev/vda3         /              ext4    defaults         0      1
+/dev/vda1         /boot/efi      vfat    umask=0077       0      2
+/dev/vda2         swap           swap    defaults         0      0
+EOF</code></pre>
+
+            <p>
+                <strong>Do yourself a favor and use <code>UUID=...</code>
+                (from <code>blkid</code>) instead of raw
+                <code>/dev/vdaX</code> paths</strong> — the above works but
+                is fragile against device renumbering on real hardware.
+            </p>
+        </section>
+
+    </main>
+
+    <nav class="chapter-bar chapter-bar-bottom">
+        <a href="/docs/handbooks/x86_64/networking.html" class="chapter-nav">‹ Prev</a>
+        <div class="chapter-heading">
+            <span class="chapter-num">Chapter 9</span>
+            <h2>fstab</h2>
+        </div>
+        <a href="/docs/handbooks/x86_64/kernel.html" class="chapter-nav">Next ›</a>
+    </nav>
+
+    <footer>
+        <a href="/">Home</a>
+        <a href="/docs/">Documentation</a>
+        <a href="/docs/handbooks/x86_64/">x86_64 Handbook</a>
+        <a href="/license/">License</a>
+    </footer>
+</body>
+</html>

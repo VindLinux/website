@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Partition and Mount the Disk - x86_64 Handbook - Vind Linux</title>
+    <link rel="stylesheet" href="../../../assets/style.css">
+</head>
+<body>
+    <header>
+        <a href="/">← Vind Linux</a>
+    </header>
+
+    <nav class="chapter-bar">
+        <a href="/docs/handbooks/x86_64/about-the-installation.html" class="chapter-nav">‹ Prev</a>
+        <div class="chapter-heading">
+            <span class="chapter-num">Chapter 2</span>
+            <h2>Partition and Mount the Disk</h2>
+        </div>
+        <a href="/docs/handbooks/x86_64/filesystems.html" class="chapter-nav">Next ›</a>
+    </nav>
+
+    <main>
+
+        <section>
+            <p>
+                Boot the Vind Linux live ISO and drop to a shell. From here
+                you need to: partition the disk, put filesystems on those
+                partitions, and mount them under <code>/mnt/vind</code>
+                before the install can start.
+            </p>
+        </section>
+
+        <section>
+            <h3>2.1. Pick a partitioner</h3>
+
+            <p>
+                Any of these work — use whichever you're comfortable with,
+                they all ship on the live ISO:
+            </p>
+
+            <ul>
+                <li><strong><code>cfdisk</code></strong> — the easiest one if you just want a menu-driven experience. Good default if you're not picky.</li>
+                <li><strong><code>fdisk</code></strong> — the classic, fully keyboard-driven, works on both MBR and GPT.</li>
+                <li><strong><code>gdisk</code></strong> — same idea as <code>fdisk</code> but GPT-only, with a couple of GPT-specific niceties (partition typecodes, etc).</li>
+                <li><strong><code>parted</code></strong> — scriptable, good if you want to partition non-interactively.</li>
+            </ul>
+
+            <p>
+                This guide assumes <strong>GPT</strong>, not MBR — needed
+                for UEFI boot regardless of which bootloader you end up
+                picking later. A minimal layout:
+            </p>
+
+            <pre><code>/dev/vda1   512M–1G   EFI System Partition (type: EFI System)
+/dev/vda2   RAM size  swap (type: Linux swap)
+/dev/vda3   rest      root (type: Linux filesystem)</code></pre>
+
+            <p>Example with <code>cfdisk</code>:</p>
+
+            <pre><code>cfdisk /dev/vda
+# create a GPT label, then the three partitions above with the right types</code></pre>
+
+            <p>Check your work:</p>
+
+            <pre><code>lsblk
+NAME   MAJ:MIN RM  SIZE RO TYPE MOUNTPOINTS
+vda    253:0    0   50G  0 disk
+├─vda1 253:1    0    1G  0 part
+├─vda2 253:2    0    4G  0 part
+└─vda3 253:3    0   45G  0 part</code></pre>
+        </section>
+
+    </main>
+
+    <nav class="chapter-bar chapter-bar-bottom">
+        <a href="/docs/handbooks/x86_64/about-the-installation.html" class="chapter-nav">‹ Prev</a>
+        <div class="chapter-heading">
+            <span class="chapter-num">Chapter 2</span>
+            <h2>Partition and Mount the Disk</h2>
+        </div>
+        <a href="/docs/handbooks/x86_64/filesystems.html" class="chapter-nav">Next ›</a>
+    </nav>
+
+    <footer>
+        <a href="/">Home</a>
+        <a href="/docs/">Documentation</a>
+        <a href="/docs/handbooks/x86_64/">x86_64 Handbook</a>
+        <a href="/license/">License</a>
+    </footer>
+</body>
+</html>

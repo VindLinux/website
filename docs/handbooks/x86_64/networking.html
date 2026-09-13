@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="color-scheme" content="dark">
+    <title>Networking - x86_64 Handbook - Vind Linux</title>
+    <link rel="stylesheet" href="../../../assets/style.css">
+</head>
+<body>
+    <header>
+        <a href="/">← Vind Linux</a>
+    </header>
+
+    <nav class="chapter-bar">
+        <a href="/docs/handbooks/x86_64/basic-system-configuration.html" class="chapter-nav">‹ Prev</a>
+        <div class="chapter-heading">
+            <span class="chapter-num">Chapter 8</span>
+            <h2>Networking</h2>
+        </div>
+        <a href="/docs/handbooks/x86_64/fstab.html" class="chapter-nav">Next ›</a>
+    </nav>
+
+    <main>
+
+        <section>
+            <h3>8.1. DNS</h3>
+
+            <pre><code>cat > /etc/resolv.conf << 'EOF'
+nameserver 1.1.1.1
+nameserver 8.8.8.8
+EOF</code></pre>
+        </section>
+
+        <section>
+            <h3>8.2. Wired networking with dhcpcd</h3>
+
+            <pre><code>ip link   # find your interface name, e.g. enp0s3 or eth0
+
+mkdir -p /etc
+cat > /etc/dhcpcd.conf << 'EOF'
+# Minimal dhcpcd config for Vind Linux.
+hostname
+option rapid_commit
+option domain_name_servers, domain_name, domain_search
+option classless_static_routes
+option interface_mtu
+require dhcp_server_identifier
+slaac private
+EOF
+
+# test it by hand once:
+dhcpcd &lt;interface-name&gt;
+ip addr show &lt;interface-name&gt;</code></pre>
+
+            <p>
+                If an address shows up and <code>/etc/resolv.conf</code>
+                gets overwritten with DHCP-provided servers, it worked.
+                <code>dhcpcd -k &lt;interface-name&gt;</code> tears it back
+                down if you want to retest.
+            </p>
+        </section>
+
+        <section>
+            <h3>8.3. Wireless with iwd (optional)</h3>
+
+            <p>Skip on a VM — only relevant for real wireless hardware.</p>
+
+            <pre><code>iwctl
+[iwd]# device list
+[iwd]# station &lt;device&gt; scan
+[iwd]# station &lt;device&gt; get-networks
+[iwd]# station &lt;device&gt; connect &lt;SSID&gt;
+[iwd]# exit</code></pre>
+
+            <p>
+                <code>iwd</code> only handles the link/auth — you still
+                need <code>dhcpcd</code> against the interface afterward to
+                get an IP.
+            </p>
+        </section>
+
+        <section>
+            <h3>8.4. Time sync</h3>
+
+            <pre><code>busybox ntpd -n -q -p pool.ntp.org</code></pre>
+
+            <p>
+                One-shot correction, not continuous drift discipline.
+                Matters because a wrong clock breaks TLS handshakes
+                (<code>curl</code>, <code>git</code>, <code>lambda reconcile</code>,
+                etc). This gets wired into boot in a later chapter.
+            </p>
+        </section>
+
+        <section>
+            <h3>8.5. Firewall</h3>
+
+            <p>
+                Not covered here — nothing in the package list so far
+                provides <code>nftables</code>/<code>iptables</code>.
+                Install one (<code>lambda mutate append nftables</code>)
+                and write rules that actually match your setup once you
+                know what the machine's going to do.
+            </p>
+        </section>
+
+    </main>
+
+    <nav class="chapter-bar chapter-bar-bottom">
+        <a href="/docs/handbooks/x86_64/basic-system-configuration.html" class="chapter-nav">‹ Prev</a>
+        <div class="chapter-heading">
+            <span class="chapter-num">Chapter 8</span>
+            <h2>Networking</h2>
+        </div>
+        <a href="/docs/handbooks/x86_64/fstab.html" class="chapter-nav">Next ›</a>
+    </nav>
+
+    <footer>
+        <a href="/">Home</a>
+        <a href="/docs/">Documentation</a>
+        <a href="/docs/handbooks/x86_64/">x86_64 Handbook</a>
+        <a href="/license/">License</a>
+    </footer>
+</body>
+</html>

@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="color-scheme" content="dark">
+    <title>Base System and Chroot - x86_64 Handbook - Vind Linux</title>
+    <link rel="stylesheet" href="../../../assets/style.css">
+</head>
+<body>
+    <header>
+        <a href="/">← Vind Linux</a>
+    </header>
+
+    <nav class="chapter-bar">
+        <a href="/docs/handbooks/x86_64/filesystems.html" class="chapter-nav">‹ Prev</a>
+        <div class="chapter-heading">
+            <span class="chapter-num">Chapter 4</span>
+            <h2>Base System and Chroot</h2>
+        </div>
+        <a href="/docs/handbooks/x86_64/toolchain-links.html" class="chapter-nav">Next ›</a>
+    </nav>
+
+    <main>
+
+        <section>
+            <h3>4.1. Download and extract the base system</h3>
+
+            <pre><code>cd /mnt/vind
+wget https://github.com/VindLinux/vindlinux/releases/download/0.3/vind-base-0.3-x86_64.tar.xz
+tar -xf vind-base-0.3-x86_64.tar.xz
+rm vind-base-0.3-x86_64.tar.xz</code></pre>
+        </section>
+
+        <section>
+            <h3>4.2. Mount the pseudo filesystems and chroot in</h3>
+
+            <pre><code>mount --bind /dev  /mnt/vind/dev
+mount -t proc proc /mnt/vind/proc
+mount -t sysfs sys  /mnt/vind/sys
+mount -t tmpfs tmpfs /mnt/vind/run
+
+chroot /mnt/vind /bin/dash</code></pre>
+
+            <p>
+                (<code>/bin/ash</code> works too — it's got a few more
+                built-in features, so that's the personal pick around here.)
+            </p>
+        </section>
+
+    </main>
+
+    <nav class="chapter-bar chapter-bar-bottom">
+        <a href="/docs/handbooks/x86_64/filesystems.html" class="chapter-nav">‹ Prev</a>
+        <div class="chapter-heading">
+            <span class="chapter-num">Chapter 4</span>
+            <h2>Base System and Chroot</h2>
+        </div>
+        <a href="/docs/handbooks/x86_64/toolchain-links.html" class="chapter-nav">Next ›</a>
+    </nav>
+
+    <footer>
+        <a href="/">Home</a>
+        <a href="/docs/">Documentation</a>
+        <a href="/docs/handbooks/x86_64/">x86_64 Handbook</a>
+        <a href="/license/">License</a>
+    </footer>
+</body>
+</html>

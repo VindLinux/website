@@ -1,0 +1,124 @@
+/* Vind Linux - simple site styles */
+
+:root {
+    color-scheme: dark;
+    --text: #e7e8e4;
+    --muted: #9a9d96;
+    --bg: #15171a;
+    --border: #2b2e31;
+    --accent: #7bc491;
+}
+
+body {
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 0 1.25rem;
+    background: var(--bg);
+    color: var(--text);
+    font-family: sans-serif;
+    line-height: 1.6;
+}
+
+header, footer {
+    text-align: center;
+    color: var(--muted);
+}
+
+header {
+    padding: 2.5rem 0 1.5rem;
+    border-bottom: 1px solid var(--border);
+}
+
+footer {
+    display: flex;
+    justify-content: center;
+    gap: 1.25rem;
+    padding: 1.5rem 0 2.5rem;
+    border-top: 1px solid var(--border);
+}
+
+a {
+    color: var(--accent);
+}
+
+vertical-a {
+    color: var(--accent);
+    display: block;
+}
+
+header a, footer a {
+    color: var(--muted);
+    text-decoration: none;
+}
+
+.brand, .slogan {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+}
+
+section {
+    margin-bottom: 2rem;
+}
+
+section h2 {
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 0.4rem;
+}
+
+code {
+    font-family: monospace;
+    background: #2a2d2a;
+    padding: 0.15em 0.4em;
+    border-radius: 3px;
+}
+
+pre {
+    background: #1e211f;
+    padding: 1rem 1.1rem;
+    border-radius: 6px;
+    overflow-x: auto;
+}
+
+pre code {
+    background: none;
+    padding: 0;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+th, td {
+    text-align: left;
+    padding: 0.4rem 0.7rem;
+    border-bottom: 1px solid var(--border);
+}
+
+.chapter-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1rem 0;
+    border-bottom: 1px solid var(--border);
+    text-align: center;
+}
+
+.chapter-bar-bottom {
+    border-bottom: none;
+    border-top: 1px solid var(--border);
+    margin-top: 1rem;
+}
+
+.chapter-nav {
+    color: var(--accent);
+    text-decoration: none;
+    white-space: nowrap;
+}
+
+.chapter-nav.is-disabled {
+    color: var(--border);
+    pointer-events: none;
+}
