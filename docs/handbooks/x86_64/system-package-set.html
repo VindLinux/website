@@ -22,8 +22,20 @@
     </nav>
 
     <main>
+        <section>
+            <p>
+                Before anything, update and sync lambda:
+            </p>
+
+            <pre><code>lambda update
+lambda sync</pre></code>
+        </section>
 
         <section>
+            <p>
+                After that append the base system packages and reconcile:
+            </p>
+
             <pre><code>lambda mutate append busybox ln realpath diffutils libnl pkgconf dhcpcd iproute2 kmod \
   openssh sqlite3 zstd popt dosfstools libelf musl-fts \
   shadow make argp-standalone kbd ncurses dash iwd eudev parted readline \
