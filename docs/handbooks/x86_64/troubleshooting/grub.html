@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="color-scheme" content="dark">
+    <title>Troubleshooting - x86_64 Handbook - Vind Linux</title>
+    <link rel="stylesheet" href="../../../../assets/style.css">
+</head>
+<body>
+    <header>
+        <a href="/website/">← Vind Linux</a>
+    </header>
+
+    <nav class="chapter-bar">
+        <a href="/website/docs/handbooks/x86_64/boot-and-post-smoke-test.html" class="chapter-nav">‹ Prev</a>
+        <div class="chapter-heading">
+            <h2>GRUB</h2>
+        </div>
+        <a href="/website/docs/handbooks/x86_64/">Next ›</a>
+    </nav>
+
+    <main>
+
+        <section>
+            <p>
+                Boot problems are usually easier to isolate by checking each
+                layer separately: firmware, bootloader, partition table,
+                filesystem, and kernel.
+            </p>
+        </section>
+
+        <section>
+            <h3>1. GRUB — “no such partition”</h3>
+
+            <p>
+                A common failure looks like this:
+            </p>
+
+            <pre><code>error: kern/disk.c:grub_disk_open:262:no such partition.
+Entering rescue mode...
+grub rescue&gt;
+ls
+(hd0) (cd0)</code></pre>
+
+            <p>
+                If <code>(hd0)</code> exists but commands such as
+                <code>ls (hd0,gpt1)</code> fail, GRUB can see the disk but
+                cannot access its partition table. This can happen even when
+                the disk and its partitions are completely valid.
+            </p>
+        </section>
+
+        <section>
+            <h3>2. Check the disk first</h3>
+
+            <p>
+                Inspect the image from the host before changing anything in
+                the guest:
+            </p>
+
+            <pre><code>qemu-img info disk.qcow2
+sudo qemu-nbd --connect=/dev/nbd0 disk.qcow2
+sudo fdisk -l /dev/nbd0</code></pre>
+
+            <p>
+                A valid GPT with the expected partitions rules out corruption
+                of the disk image as the immediate cause.
+            </p>
+        </section>
+
+        <section>
+            <h3>3. Check the GRUB modules</h3>
+
+            <p>
+                GRUB needs the appropriate modules to understand the
+                partition table and filesystem. For a GPT/ext4 system, check
+                that these modules exist:
+            </p>
+
+            <pre><code>ls -l /boot/grub/x86_64-efi/part_gpt.mod
+ls -l /boot/grub/x86_64-efi/ext2.mod
+ls -l /boot/grub/x86_64-efi/disk.mod</code></pre>
+
+            <p>
+                The presence of these files alone does not guarantee that the
+                EFI bootloader was installed with everything it needs.
+            </p>
+        </section>
+
+        <section>
+            <h3>4. Reinstall GRUB with the required modules</h3>
+
+            <p>
+                Mount the installed system and EFI partition, then reinstall
+                the EFI loader explicitly:
+            </p>
+
+            <pre><code>grub-install \
+    --target=x86_64-efi \
+    --efi-directory=/boot/efi \
+    --bootloader-id=VindLinux \
+    --removable \
+    --recheck \
+    --modules="part_gpt ext2 disk"</code></pre>
+
+            <p>
+                The important part here is explicitly including
+                <code>part_gpt</code>, <code>ext2</code>, and
+                <code>disk</code>. After installation, regenerate the GRUB
+                configuration if necessary:
+            </p>
+
+            <pre><code>grub-mkconfig -o /boot/grub/grub.cfg</code></pre>
+        </section>
+
+        <section>
+            <h3>5. VirtIO is not necessarily the problem</h3>
+
+            <p>
+                If the same <code>no such partition</code> error happens with
+                both VirtIO and IDE/SATA disks, the storage bus itself is not
+                the root cause. Test the bootloader before changing the
+                virtual hardware configuration.
+            </p>
+
+            <pre><code>ls
+(hd0) (cd0)
+
+ls (hd0,gpt1)
+error: kern/disk.c:grub_disk_open:262:no such partition.</code></pre>
+
+            <p>
+                In this situation, focus on GRUB's ability to read the disk
+                and partition table rather than changing the filesystem or
+                recreating the disk image.
+            </p>
+        </section>
+
+        <section>
+            <h3>6. Verify the result</h3>
+
+            <p>
+                After reinstalling GRUB, boot the system again using the same
+                disk configuration originally intended for the machine.
+                For a VirtIO-backed QEMU disk, the expected result is that
+                GRUB can locate the GPT partitions and continue to the kernel.
+            </p>
+
+            <p>
+                The EFI fallback loader should be present at:
+            </p>
+
+            <pre><code>/boot/efi/EFI/BOOT/BOOTX64.EFI</code></pre>
+
+            <p>
+                If the system reaches the kernel with the original storage
+                configuration restored, the bootloader installation was the
+                relevant change.
+            </p>
+        </section>
+
+    </main>
+
+    <nav class="chapter-bar chapter-bar-bottom">
+        <a href="/website/docs/handbooks/x86_64/boot-and-post-smoke-test.html" class="chapter-nav">‹ Prev</a>
+        <div class="chapter-heading">
+            <h2>GRUB</h2>
+        </div>
+        <a href="/website/docs/handbooks/x86_64/">Next ›</a>
+    </nav>
+
+    <footer>
+        <a href="/website/">Home</a>
+        <a href="/website/docs/">Documentation</a>
+        <a href="/website/docs/handbooks/x86_64/">x86_64 Handbook</a>
+        <a href="/website/license/">License</a>
+    </footer>
+</body>
+</html>
