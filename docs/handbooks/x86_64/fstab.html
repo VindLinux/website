@@ -33,11 +33,31 @@
 EOF</code></pre>
 
             <p>
-                <strong>Do yourself a favor and use <code>UUID=...</code>
+                <strong>Do yourself a favor and use <code>PARTUUID=...</code>
                 (from <code>blkid</code>) instead of raw
                 <code>/dev/vdaX</code> paths</strong> — the above works but
                 is fragile against device renumbering on real hardware.
             </p>
+
+            <p>
+                <strong>Use <code>PARTUUID=</code> instead of
+                <code>UUID=</code>.</strong> <code>UUID=</code> does
+                technically work in <code>fstab</code>, since it's resolved
+                by <code>libblkid</code> in userspace rather than by the
+                kernel. However, <code>blkid</code> enumerates block
+                devices via <code>/sys/block</code>, so resolving it too
+                early in boot (before <code>/proc</code> and
+                <code>/sys</code> are mounted) will fail silently. Using
+                <code>PARTUUID=</code> avoids this dependency and keeps the
+                identification method consistent with
+                <code>limine.conf</code>.
+            </p>
+
+            <pre><code># Avoid
+UUID=&lt;uuid&gt;   /   ext4   defaults   0   1
+
+# Preferred
+PARTUUID=&lt;partuuid&gt;   /   ext4   defaults   0   1</code></pre>
         </section>
 
     </main>

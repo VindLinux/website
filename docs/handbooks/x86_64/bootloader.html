@@ -84,9 +84,35 @@ default_entry: 1
     kernel_path: boot():/EFI/BOOT/vmlinuz-&lt;kernel-version&gt;
     # If using an initramfs, uncomment the line below:
     # module_path: boot():/EFI/BOOT/initramfs-&lt;kernel-version&gt;.img
-    cmdline: root=UUID=&lt;your-root-uuid&gt; rw
-    # cmdline: root=UUID=&lt;your-root-uuid&gt; rootflags=subvol=@ rw (if using Btrfs)
+    cmdline: root=PARTUUID=&lt;your-root-partuuid&gt; rw rootwait
+    # cmdline: root=PARTUUID=&lt;your-root-partuuid&gt; rootflags=subvol=@ rw rootwait (if using Btrfs)
 EOF</code></pre>
+
+            <p>
+                <strong>Use <code>PARTUUID=</code> or a direct device node
+                (<code>/dev/vda3</code>, etc.) — <code>UUID=</code> is not
+                supported.</strong> The kernel's <code>root=</code> parser
+                (<code>block/early-lookup.c</code>) has no filesystem-UUID
+                resolution path without an initrd/udev populating
+                <code>/dev/disk/by-uuid/</code>. If you're booting a
+                monolithic kernel with no initrd, <code>root=UUID=...</code>
+                falls through to numeric parsing, fails, disables
+                <code>rootwait</code> early, and causes a kernel panic even
+                though the device is available.
+            </p>
+
+            <p>
+                <code>PARTUUID=</code> is resolved natively by the kernel
+                (reads the GPT table directly, no userspace involved) and
+                is the recommended option, as it's guaranteed regardless of
+                kernel build/config.
+            </p>
+
+            <pre><code># Wrong — unsupported without an initrd
+cmdline: root=UUID=&lt;uuid&gt; rw
+
+# Correct
+cmdline: root=PARTUUID=&lt;partuuid&gt; rw rootwait</code></pre>
 
             <p>
                 Replace <code>&lt;kernel-version&gt;</code> with whatever
