@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="color-scheme" content="dark">
+    <title>Configuration - Vind Linux</title>
+    <link rel="stylesheet" href="../../../../assets/style.css">
+	<link rel="icon" type="image/png" href="/website/assets/logo.png">
+</head>
+<body>
+    <header>
+        <a href="/website/">← Vind Linux</a>
+    </header>
+
+    <nav style="justify-content: center;" class="chapter-bar">
+		<div class="chapter-heading">
+			<h2>dwl</h2>
+		</div>
+    </nav>
+
+    <main>
+
+        <section>
+            <p>
+                This guide shows how to build and run <strong>dwl</strong>,
+                a lightweight Wayland compositor, on Vind Linux. dwl is not
+                part of lambda, so you compile it yourself, but the
+                libraries it needs (wlroots and its dependencies) are
+                installed through lambda.
+            </p>
+        </section>
+
+        <section>
+            <h3>1. Install the dependencies</h3>
+
+            <p>
+                Installing <code>wlroots</code> with lambda pulls in
+                everything dwl needs to build:
+            </p>
+
+            <pre><code>lambda reconcile</code></pre>
+        </section>
+
+        <section>
+            <h3>2. Build dwl</h3>
+
+            <pre><code>cd /source/dwl
+export PKG_CONFIG_PATH=$PKG_CONFIG_PATH:/usr/lib64/pkgconfig
+make</code></pre>
+
+            <p>
+                Some libraries install their <code>.pc</code> files in
+                <code>/usr/lib64/pkgconfig</code>, which pkg-config does not
+                search by default, so the <code>export</code> above is
+                needed. To make it permanent, append
+                <code>:/usr/lib64/pkgconfig</code> to the
+                <code>PKG_CONFIG_PATH</code> line in
+                <code>/etc/profile</code>.
+            </p>
+
+            <p>
+                If <code>make</code> fails with
+                <code>enum-header: not found</code>, run it like this
+                instead:
+            </p>
+
+            <pre><code>make WAYLAND_SCANNER=wayland-scanner</code></pre>
+
+            <p>
+                By default dwl uses <code>Alt</code> as the Mod key and
+                <code>foot</code> as the terminal (<a href="foot.html">build
+                it first</a>, or change
+                <code>termcmd</code> in <code>config.h</code>). Open a
+                terminal with <code>Alt+Shift+Enter</code> and quit with
+                <code>Alt+Shift+Q</code>.
+            </p>
+        </section>
+
+        <section>
+            <h3>3. Set up the system</h3>
+
+            <p>
+                Vind has no systemd-logind or elogind, so a few things that
+                are normally automatic must be configured by hand. Run the
+                commands in this section as root.
+            </p>
+        </section>
+
+        <section>
+            <h3>3.1 seatd and user groups</h3>
+
+            <p>
+                seatd lets your user access the screen and input devices
+                without being root. Create a runit service at
+                <code>/etc/sv/seatd/run</code>:
+            </p>
+
+            <pre><code>#!/bin/sh
+exec seatd -g seat</code></pre>
+
+            <p>
+                Then enable it and add your user (replace
+                <code>gumi</code>) to the required groups:
+            </p>
+
+            <pre><code>chmod +x /etc/sv/seatd/run
+ln -sf /etc/sv/seatd /etc/service/seatd
+addgroup seat        # if it does not exist yet
+addgroup gumi seat
+addgroup gumi video
+addgroup gumi input</code></pre>
+
+            <p>
+                New groups only apply after a new login; check with
+                <code>id</code>. If you see
+                <code>Could not connect to socket /run/seatd.sock:
+                Permission denied</code>, the group change has not taken
+                effect yet.
+            </p>
+        </section>
+
+        <section>
+            <h3>3.2 udev</h3>
+
+            <p>
+                Without <code>udevd</code> running, dwl fails with
+                <code>libinput initialization failed, no input
+                devices</code>. udev's rules refer to a few standard system
+                groups, and it prints a warning for each one that is
+                missing, so create them first:
+            </p>
+
+            <pre><code>addgroup -g 5  tty
+addgroup -g 6  disk
+addgroup -g 7  lp
+addgroup -g 9  kmem
+addgroup -g 20 dialout
+addgroup -g 24 cdrom
+addgroup -g 26 tape
+addgroup -g 29 audio
+addgroup -g 78 kvm
+addgroup sgx</code></pre>
+
+            <p>
+                Then create the service at <code>/etc/sv/udev/run</code>:
+            </p>
+
+            <pre><code>#!/bin/sh
+(sleep 1; udevadm trigger --action=add; udevadm settle) &amp;
+exec udevd</code></pre>
+
+            <p>
+                And enable it:
+            </p>
+
+            <pre><code>chmod +x /etc/sv/udev/run
+ln -sf /etc/sv/udev /etc/service/udev</code></pre>
+        </section>
+
+        <section>
+            <h3>3.3 Device permissions</h3>
+
+            <p>
+                <code>/dev</code> is recreated on every boot, so the graphics
+                device comes back accessible only to root
+                (<code>Failed to open DRM node '/dev/dri/card0': Permission
+                denied</code>). Fix it with a udev rule at
+                <code>/etc/udev/rules.d/70-vind-perms.rules</code>:
+            </p>
+
+            <pre><code>SUBSYSTEM=="drm", KERNEL=="card[0-9]*", GROUP="video", MODE="0660"
+SUBSYSTEM=="input", GROUP="input", MODE="0660"</code></pre>
+
+            <p>
+                Conditions use <code>==</code> and assignments use
+                <code>=</code>; mixing them up gives
+                <code>invalid KERNEL operation</code>. Restart udev to apply
+                the rule:
+            </p>
+
+            <pre><code>sv restart udev</code></pre>
+        </section>
+
+        <section>
+            <h3>3.4 XDG_RUNTIME_DIR</h3>
+
+            <p>
+                Wayland needs a private runtime directory
+                (<code>XDG_RUNTIME_DIR must be set</code> otherwise). Only
+                root can write to <code>/run/user</code>, so the directory
+                has to be created at boot. Add this to
+                <code>/etc/runit/1</code>, after the filesystems are mounted
+                (replace <code>1000</code> with your UID, shown by
+                <code>id -u</code>):
+            </p>
+
+            <pre><code>mkdir -p /run/user/1000 &amp;&amp; chown 1000:1000 /run/user/1000 &amp;&amp; chmod 700 /run/user/1000</code></pre>
+
+            <p>
+                Then point the variable at it in
+                <code>/etc/profile</code>:
+            </p>
+
+            <pre><code>if [ -z "$XDG_RUNTIME_DIR" ]; then
+    export XDG_RUNTIME_DIR="/run/user/$(id -u)"
+fi</code></pre>
+
+            <p>
+                The directory must be named after your UID
+                (<code>/run/user/1000</code>) and owned by your user. If it
+                is missing or owned by root, dwl exits with
+                <code>startup: display_add_socket_auto</code>. Log in again
+                after changing <code>/etc/profile</code>, since the variable
+                is only set at login.
+            </p>
+
+            <p>
+                Until the boot step is in place, you can use
+                <code>/tmp/runtime-1000</code> as a replacement. Create it
+                as your user with
+                <code>mkdir -m 700 /tmp/runtime-1000</code> and export
+                <code>XDG_RUNTIME_DIR=/tmp/runtime-1000</code> by hand.
+            </p>
+        </section>
+
+        <section>
+            <h3>4. Run dwl</h3>
+
+            <pre><code>cat > /usr/bin/start-dwl <<'EOF'
+#!/bin/sh
+
+export LIBSEAT_BACKEND=seatd
+export WLR_RENDERER=pixman
+export WLR_NO_HARDWARE_CURSORS=1
+
+exec dwl
+EOF
+
+chmod +x /usr/bin/start-dwl
+
+start-dwl</code></pre>
+
+            <p>
+                <code>XDG_RUNTIME_DIR</code> comes from the previous
+                section. In a VM with <code>stdvga</code> there is no real
+                graphics acceleration, and wlroots refuses software
+                rendering by default. Setting
+                <code>WLR_RENDERER=pixman</code> uses its built-in software
+                renderer, which is the most stable choice. The alternative,
+                <code>WLR_RENDERER_ALLOW_SOFTWARE=1</code>, caused garbage
+                on screen and duplicated cursors in our tests.
+            </p>
+
+            <p>
+                For better results in QEMU, use
+                <code>-device virtio-vga</code> instead of
+                <code>stdvga</code>.
+            </p>
+        </section>
+
+    </main>
+
+    <nav style="justify-content: center;" class="chapter-bar chapter-bar-bottom">
+        <div class="chapter-heading">
+            <h2>dwl</h2>
+        </div>
+    </nav>
+
+    <footer>
+        <a href="/website/">Home</a>
+        <a href="/website/docs/">Documentation</a>
+        <a href="/website/docs/handbooks/x86_64/">x86_64 Handbook</a>
+        <a href="/website/license/">License</a>
+    </footer>
+</body>
+</html>

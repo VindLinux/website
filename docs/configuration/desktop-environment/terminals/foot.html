@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="color-scheme" content="dark">
+    <title>Configuration - Vind Linux</title>
+    <link rel="stylesheet" href="../../../../assets/style.css">
+	<link rel="icon" type="image/png" href="/website/assets/logo.png">
+</head>
+<body>
+    <header>
+        <a href="/website/">← Vind Linux</a>
+    </header>
+
+    <nav style="justify-content: center;" class="chapter-bar">
+		<div class="chapter-heading">
+			<h2>foot</h2>
+		</div>
+    </nav>
+
+    <main>
+
+        <section>
+            <p>
+                This guide shows how to build and install <strong>foot</strong>,
+                a fast and lightweight Wayland terminal, on Vind Linux. foot
+                is the default terminal of <a href="../wms/dwl.html">dwl</a>. Like
+                dwl, it is not part of lambda, so you compile it yourself.
+            </p>
+        </section>
+
+        <section>
+            <h3>1. Requirements</h3>
+
+            <p>
+                foot needs a Wayland session to run, so set up
+                <a href="../wms/dwl.html">dwl</a> first. The libraries it builds
+                against (pixman, wayland, xkbcommon, fontconfig, freetype)
+                are already present once wlroots is installed. Two of its
+                own libraries, <code>tllist</code> and <code>fcft</code>,
+                are downloaded and built automatically during the build, so
+                the machine needs network access and <code>git</code>.
+            </p>
+
+            <p>
+                You also need at least one monospace font installed, and a
+                UTF-8 locale (Vind sets <code>LANG=C.UTF-8</code> in
+                <code>/etc/profile</code>).
+            </p>
+        </section>
+
+        <section>
+            <h3>2. Build and install</h3>
+
+            <pre><code>cd /source
+git clone https://codeberg.org/dnkl/foot.git
+cd foot
+export PKG_CONFIG_PATH=$PKG_CONFIG_PATH:/usr/lib64/pkgconfig
+meson setup bld/release --buildtype=release --prefix=/usr -Dterminfo-base-name=foot-extra
+ninja -C bld/release
+ninja -C bld/release install</code></pre>
+
+            <p>
+                The <code>PKG_CONFIG_PATH</code> line is needed for the same
+                reason as in the dwl guide: without it, meson stops with
+                <code>Dependency "pixman-1" not found</code>. If you already
+                made it permanent in <code>/etc/profile</code>, you can skip
+                it.
+            </p>
+
+            <p>
+                <code>-Dterminfo-base-name=foot-extra</code> makes foot use
+                the <code>foot</code> terminfo that already ships with
+                ncurses, and installs its own extra definitions under the
+                name <code>foot-extra</code>, so the two never overwrite each
+                other.
+            </p>
+
+            <p>
+                While configuring you will see
+                <code>Grapheme clustering: NO</code> and a few
+                <code>found: NO</code> lines for optional libraries
+                (<code>libutf8proc</code>, <code>harfbuzz</code>,
+                <code>systemd</code>). They only disable optional features
+                and can be ignored.
+            </p>
+        </section>
+
+        <section>
+            <h3>3. Run foot</h3>
+
+            <p>
+                Start dwl and press <code>Alt+Shift+Enter</code>. You can
+                also launch it from any terminal inside the session:
+            </p>
+
+            <pre><code>foot</code></pre>
+
+            <p>
+                If foot complains about its terminfo, start it with a
+                generic one instead:
+            </p>
+
+            <pre><code>foot --term xterm-256color</code></pre>
+
+            <p>
+                Running <code>foot</code> outside a Wayland session fails,
+                because there is no compositor to connect to.
+            </p>
+        </section>
+
+    </main>
+
+    <nav style="justify-content: center;" class="chapter-bar chapter-bar-bottom">
+        <div class="chapter-heading">
+            <h2>foot</h2>
+        </div>
+    </nav>
+
+    <footer>
+        <a href="/website/">Home</a>
+        <a href="/website/docs/">Documentation</a>
+        <a href="/website/docs/handbooks/x86_64/">x86_64 Handbook</a>
+        <a href="/website/license/">License</a>
+    </footer>
+</body>
+</html>
