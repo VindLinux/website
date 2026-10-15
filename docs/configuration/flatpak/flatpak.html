@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="color-scheme" content="dark">
+    <title>Configuration - Vind Linux</title>
+    <link rel="stylesheet" href="../../../assets/style.css">
+    <link rel="icon" type="image/png" href="/website/assets/logo.png">
+</head>
+<body>
+    <header>
+        <a href="/website/">← Vind Linux</a>
+    </header>
+
+
+<nav style="justify-content: center;" class="chapter-bar">
+    <div class="chapter-heading">
+        <h2>Flatpak</h2>
+    </div>
+</nav>
+
+<main>
+
+    <section>
+        <p>
+            This guide shows how to install
+            <a href="https://flatpak.org/">Flatpak</a> on Vind Linux and
+            use it to run applications that are not packaged for lambda,
+            such as Firefox. Flatpak itself is installed through lambda;
+            the applications are downloaded already compiled from
+            <a href="https://flathub.org/">Flathub</a>, so nothing has to
+            be built from source. Run the commands that change the
+            system as root, and the Flatpak commands as your normal user.
+        </p>
+        <p>
+            It assumes a working <a href="dwl.html">dwl</a> session, since
+            graphical applications need a Wayland compositor.
+        </p>
+    </section>
+
+    <section>
+        <h3>1. Install Flatpak</h3>
+
+        <pre><code>lambda sync
+lambda mutate append flatpak
+lambda reconcile</code></pre>
+
+
+        <p>
+            lambda also installs everything Flatpak needs, such as
+            bubblewrap, xdg-dbus-proxy, ostree and appstream. By default
+            the <code>system-helper</code> attribute is off, so Flatpak is
+            built without polkit and applications are installed
+            <strong>per user</strong>, with <code>--user</code>, as shown
+            below.
+        </p>
+
+        <p>
+            Check that it works:
+        </p>
+
+        <pre><code>flatpak --version</code></pre>
+    </section>
+
+    <section>
+        <h3>2. Check the kernel</h3>
+
+        <p>
+            Flatpak isolates each application with bubblewrap, which
+            needs user namespaces. Run these as your normal user:
+        </p>
+
+        <pre><code>unshare --user --pid echo ok
+cat /proc/sys/user/max_user_namespaces
+ls -l /dev/fuse</code></pre>
+
+
+        <p>
+            The first command must print <code>ok</code>, the second must
+            be greater than <code>0</code>, and <code>/dev/fuse</code>
+            must exist. If the second one is <code>0</code>, enable it as
+            root with:
+        </p>
+
+        <pre><code>echo 15000 &gt; /proc/sys/user/max_user_namespaces</code></pre>
+    </section>
+
+    <section>
+        <h3>3. D-Bus session</h3>
+
+        <p>
+            Flatpak uses a D-Bus <em>session bus</em> for communication
+            with desktop services and portals such as file choosers,
+            links and notifications. Vind does not use systemd-logind,
+            so the session bus is provided by a dedicated runit service.
+        </p>
+
+        <p>
+            Create the service as root (replace <code>gumi</code> with
+            your user in the script and in the checks below):
+        </p>
+
+        <pre><code>mkdir -p /etc/sv/dbus-session/log
+mkdir -p /var/log/dbus-session
+
+cat > /etc/sv/dbus-session/run <<'EOF'
+#!/bin/sh
+exec 2>&1
+
+USER_NAME=gumi
+USER_ID=$(id -u "$USER_NAME")
+RUNTIME="/run/user/$USER_ID"
+
+[ -d "$RUNTIME" ] || { sleep 2; exit 1; }
+rm -f "$RUNTIME/bus"
+
+exec chpst -u "$USER_NAME" env \
+    HOME="/home/$USER_NAME" \
+    USER="$USER_NAME" \
+    XDG_RUNTIME_DIR="$RUNTIME" \
+    XDG_DATA_DIRS="/home/$USER_NAME/.local/share/flatpak/exports/share:/var/lib/flatpak/exports/share:/usr/local/share:/usr/share" \
+    DBUS_SESSION_BUS_ADDRESS="unix:path=$RUNTIME/bus" \
+    dbus-daemon \
+        --session \
+        --nofork \
+        --nopidfile \
+        --address="unix:path=$RUNTIME/bus"
+EOF
+
+cat > /etc/sv/dbus-session/log/run <<'EOF'
+#!/bin/sh
+exec svlogd /var/log/dbus-session
+EOF
+
+chmod +x /etc/sv/dbus-session/run
+chmod +x /etc/sv/dbus-session/log/run
+
+ln -sf /etc/sv/dbus-session /etc/service/dbus-session</code></pre>
+
+
+        <p>
+            The service runs <code>dbus-daemon</code> as the normal user
+            instead of root and creates the session bus at
+            <code>/run/user/&lt;uid&gt;/bus</code>. An old socket is
+            removed before starting the daemon so that the service can
+            recover after an unclean shutdown.
+        </p>
+
+        <p>
+            The service requires <code>chpst</code>, which is provided by
+            runit. The user's runtime directory must also exist before
+            the service can start. The <a href="dwl.html">dwl guide</a>
+            creates <code>/run/user/1000</code> during boot.
+        </p>
+
+        <p>
+            The service has a dedicated runit logger, so D-Bus output does
+            not get written directly to the terminal:
+        </p>
+
+        <pre><code>sv status dbus-session</code></pre>
+
+        <p>
+            To inspect the service log:
+        </p>
+
+        <pre><code>tail -f /var/log/dbus-session/current</code></pre>
+
+        <p>
+            Check that the session bus socket exists:
+        </p>
+
+        <pre><code>ls -l /run/user/$(id -u gumi)/bus</code></pre>
+
+        <p>
+            Then check that the bus responds:
+        </p>
+
+        <pre><code>su - gumi -c 'DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/$(id -u gumi)/bus" dbus-send --session --dest=org.freedesktop.DBus --type=method_call --print-reply /org/freedesktop/DBus org.freedesktop.DBus.ListNames'</code></pre>
+
+        <p>
+            Set the session bus address in <code>/etc/profile</code>,
+            below the block that sets <code>XDG_RUNTIME_DIR</code>:
+        </p>
+
+        <pre><code>if [ -z "$DBUS_SESSION_BUS_ADDRESS" ]; then
+    export DBUS_SESSION_BUS_ADDRESS="unix:path=$XDG_RUNTIME_DIR/bus"
+fi</code></pre>
+
+
+        <p>
+            Log in again after changing <code>/etc/profile</code>.
+            Programs started from the session will then use the same
+            D-Bus bus.
+        </p>
+
+        <p>
+            The <code>/usr/bin/start-dwl</code> script does not need
+            <code>dbus-run-session</code>. Its final command can simply
+            be:
+        </p>
+
+        <pre><code>exec dwl</code></pre>
+    </section>
+
+    <section>
+        <h3>4. XDG_DATA_DIRS</h3>
+
+        <p>
+            Flatpak exports desktop files, icons and other application
+            data into XDG data directories. Add the Flatpak export
+            directories to <code>XDG_DATA_DIRS</code> in
+            <code>/etc/profile</code> or <code>~/.profile</code>:
+        </p>
+
+        <pre><code>export XDG_DATA_DIRS="$HOME/.local/share/flatpak/exports/share:/var/lib/flatpak/exports/share:/usr/local/share:/usr/share"</code></pre>
+
+        <p>
+            Log in again after changing the file.
+        </p>
+    </section>
+
+    <section>
+        <h3>5. Add Flathub and install an application</h3>
+
+        <p>
+            Add the Flathub repository for your user:
+        </p>
+
+        <pre><code>flatpak --user remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo</code></pre>
+
+        <p>
+            Then install Firefox. Flatpak also downloads the runtime the
+            application needs (<code>org.freedesktop.Platform</code>),
+            which takes between 1 and 2 GB, so check the free space in
+            your home first:
+        </p>
+
+        <pre><code>df -h /home
+flatpak --user install flathub org.mozilla.firefox</code></pre>
+
+
+        <p>
+            Flatpak asks to confirm the runtime and then the application.
+            Add <code>-y</code> to answer yes to all questions.
+        </p>
+    </section>
+
+    <section>
+        <h3>6. Run it</h3>
+
+        <p>
+            Inside the dwl session (opened with
+            <code>start-dwl</code>), open a terminal with
+            <code>Alt+Shift+Enter</code> and run:
+        </p>
+
+        <pre><code>flatpak run org.mozilla.firefox</code></pre>
+
+        <p>
+            The application uses the D-Bus session created by the
+            <code>dbus-session</code> runit service.
+        </p>
+
+        <p>
+            In a VM without graphics acceleration Firefox uses software
+            rendering and is slow, but it works. On real hardware it
+            runs normally.
+        </p>
+
+        <p>
+            To list or remove what you installed:
+        </p>
+
+        <pre><code>flatpak --user list
+flatpak --user uninstall org.mozilla.firefox
+flatpak --user uninstall --unused</code></pre>
+    </section>
+
+
+    <section>
+        <h3>7. Troubleshooting</h3>
+
+        <p>
+            <code>Cannot autolaunch D-Bus without X11 $DISPLAY</code>
+            or another error connecting to the session bus: check that
+            the <code>dbus-session</code> service is running and that
+            <code>DBUS_SESSION_BUS_ADDRESS</code> points to the user's
+            bus.
+        </p>
+
+        <pre><code>sv status dbus-session
+echo "$DBUS_SESSION_BUS_ADDRESS"
+ls -l "$XDG_RUNTIME_DIR/bus"</code></pre>
+
+
+        <p>
+            If the service keeps restarting, make sure the runtime
+            directory exists:
+        </p>
+
+        <pre><code>ls -ld /run/user/$(id -u)</code></pre>
+
+        <p>
+            If the service is running but the bus does not respond, check
+            its log:
+        </p>
+
+        <pre><code>tail -n 50 /var/log/dbus-session/current</code></pre>
+
+        <p>
+            <code>bwrap: No permissions to create new namespace</code>:
+            user namespaces are disabled. Redo the checks in section 2.
+        </p>
+
+        <p>
+            <code>Do you want to install it? [Y/n]</code> waiting:
+            it is just asking for confirmation. Press Enter, or use
+            <code>-y</code>.
+        </p>
+
+        <p>
+            The application does not appear in a launcher: Vind has no
+            desktop environment, so run it from the terminal with
+            <code>flatpak run</code>.
+        </p>
+    </section>
+
+</main>
+
+<nav style="justify-content: center;" class="chapter-bar chapter-bar-bottom">
+    <div class="chapter-heading">
+        <h2>Flatpak</h2>
+    </div>
+</nav>
+
+<footer>
+    <a href="/website/">Home</a>
+    <a href="/website/docs/">Documentation</a>
+    <a href="/website/docs/handbooks/x86_64/">x86_64 Handbook</a>
+    <a href="/website/license/">License</a>
+</footer>
+
+
+</body>
+</html>
