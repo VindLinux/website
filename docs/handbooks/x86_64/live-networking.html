@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="color-scheme" content="dark">
+    <title>Networking in the Live Environment - x86_64 Handbook - Vind Linux</title>
+    <link rel="stylesheet" href="../../../assets/style.css">
+	<link rel="icon" type="image/png" href="/website/assets/logo.png">
+</head>
+<body>
+    <header>
+        <a href="/website/">← Vind Linux</a>
+    </header>
+
+    <nav class="chapter-bar">
+        <a href="/website/docs/handbooks/x86_64/about-the-installation.html" class="chapter-nav">‹ Prev</a>
+        <div class="chapter-heading">
+            <span class="chapter-num">Chapter 2</span>
+            <h2>Networking in the Live Environment</h2>
+        </div>
+        <a href="/website/docs/handbooks/x86_64/partition-and-mount.html" class="chapter-nav">Next ›</a>
+    </nav>
+
+    <main>
+
+        <section>
+            <p>
+                The base system and packages are downloaded during the
+                install, so the live environment needs a working internet
+                connection before you start.
+            </p>
+
+            <p>
+                <strong>Running in a VM? You can skip this chapter</strong>
+                — the virtual NIC is normally brought up for you. Go
+                straight to the <strong>Next</strong> link.
+            </p>
+
+            <p>
+                On real hardware, wired and wireless both need
+                <code>dbus</code> running first, and wireless also needs
+                <code>iwd</code>.
+            </p>
+        </section>
+
+        <section>
+            <h3>2.1. Start D-Bus</h3>
+
+            <pre><code>mkdir -p /run/dbus
+dbus-daemon --system --fork
+ln -sf /run/dbus /var/run/dbus</code></pre>
+        </section>
+
+        <section>
+            <h3>2.2. Start iwd (wireless only)</h3>
+
+            <p>Skip this section and the next if you're on a wired connection.</p>
+
+            <pre><code>/usr/libexec/iwd &amp;</code></pre>
+        </section>
+
+        <section>
+            <h3>2.3. Connect to a Wi-Fi network (wireless only)</h3>
+
+            <pre><code>iwctl
+[iwd]# device list
+[iwd]# station &lt;device&gt; scan
+[iwd]# station &lt;device&gt; get-networks
+[iwd]# station &lt;device&gt; connect &lt;SSID&gt;
+[iwd]# exit</code></pre>
+        </section>
+
+        <section>
+            <h3>2.4. Get an IP address and test</h3>
+
+            <p>
+                <code>iwd</code> only handles the link and authentication,
+                so wired and wireless both need <code>dhcpcd</code> to get
+                an address:
+            </p>
+
+            <pre><code>ip link   # find your interface name, e.g. enp0s3, wlan0
+dhcpcd &lt;interface-name&gt;
+ping -c 1 1.1.1.1</code></pre>
+
+            <p>
+                If the ping answers, you're online and can move on to
+                partitioning.
+            </p>
+        </section>
+
+    </main>
+
+    <nav class="chapter-bar chapter-bar-bottom">
+        <a href="/website/docs/handbooks/x86_64/about-the-installation.html" class="chapter-nav">‹ Prev</a>
+        <div class="chapter-heading">
+            <span class="chapter-num">Chapter 2</span>
+            <h2>Networking in the Live Environment</h2>
+        </div>
+        <a href="/website/docs/handbooks/x86_64/partition-and-mount.html" class="chapter-nav">Next ›</a>
+    </nav>
+
+    <footer>
+        <a href="/website/">Home</a>
+        <a href="/website/docs/">Documentation</a>
+        <a href="/website/docs/handbooks/x86_64/">x86_64 Handbook</a>
+        <a href="/website/license/">License</a>
+    </footer>
+</body>
+</html>

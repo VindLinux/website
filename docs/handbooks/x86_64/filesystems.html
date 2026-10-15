@@ -16,7 +16,7 @@
     <nav class="chapter-bar">
         <a href="/website/docs/handbooks/x86_64/partition-and-mount.html" class="chapter-nav">‹ Prev</a>
         <div class="chapter-heading">
-            <span class="chapter-num">Chapter 3</span>
+            <span class="chapter-num">Chapter 4</span>
             <h2>Filesystems</h2>
         </div>
         <a href="/website/docs/handbooks/x86_64/base-system-and-chroot.html" class="chapter-nav">Next ›</a>
@@ -37,7 +37,7 @@
         </section>
 
         <section>
-            <h3>3.1. ext4, single root</h3>
+            <h3>4.1. ext4, single root</h3>
 
             <pre><code>mkfs.vfat -F32 /dev/vda1
 mkswap /dev/vda2 && swapon /dev/vda2
@@ -50,7 +50,7 @@ mount /dev/vda1 /mnt/vind/boot/efi</code></pre>
         </section>
 
         <section>
-            <h3>3.2. btrfs, with / and /home as separate subvolumes</h3>
+            <h3>4.2. btrfs, with / and /home as separate subvolumes</h3>
 
             <pre><code>mkfs.vfat -F32 /dev/vda1
 mkswap /dev/vda2 && swapon /dev/vda2
@@ -93,7 +93,7 @@ vda    253:0    0   50G  0 disk
     <nav class="chapter-bar chapter-bar-bottom">
         <a href="/website/docs/handbooks/x86_64/partition-and-mount.html" class="chapter-nav">‹ Prev</a>
         <div class="chapter-heading">
-            <span class="chapter-num">Chapter 3</span>
+            <span class="chapter-num">Chapter 4</span>
             <h2>Filesystems</h2>
         </div>
         <a href="/website/docs/handbooks/x86_64/base-system-and-chroot.html" class="chapter-nav">Next ›</a>
