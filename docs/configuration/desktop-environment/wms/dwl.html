@@ -23,7 +23,7 @@
 
         <section>
             <p>
-			This guide shows how to build and run <a href="https://codeberg.org/dwl/dwl">dwl</a>,
+                This guide shows how to build and run <strong>dwl</strong>,
                 a lightweight Wayland compositor, on Vind Linux. dwl is not
                 part of lambda, so you compile it yourself, but the
                 libraries it needs (wlroots and its dependencies) are
@@ -35,19 +35,39 @@
             <h3>1. Install the dependencies</h3>
 
             <p>
-                Installing <code>wlroots</code> with lambda pulls in
-                everything dwl needs to build:
+                dwl is built on wlroots. For the recommended GPU renderer
+                (GLES2), wlroots should be built with the <code>egl</code>
+                and <code>gbm</code> attrs. Add them to
+                <code>/etc/lambda/package.compattrs</code>:
+            </p>
+
+            <pre><code>wlroots egl gbm</code></pre>
+
+            <p>
+                Or, if you prefer to enable them for every package, add this
+                to <code>/etc/lambda/make.conf</code>:
+            </p>
+
+            <pre><code>COMP_ATTRS="egl gbm"</code></pre>
+
+            <p>
+                wlroots also depends on mesa, which needs a driver for your
+                graphics hardware; see the <a href="/website/docs/configuration/desktop-environment/mesa.html">mesa</a> page.
+                Then install everything dwl needs to build:
             </p>
 
             <pre><code>lambda reconcile</code></pre>
+
+            <p>
+                To run X11 applications, see the optional
+                <a href="/website/docs/configuration/desktop-environment/xwayland.html">XWayland</a> page.
+            </p>
         </section>
 
         <section>
             <h3>2. Build dwl</h3>
 
-            <pre><code>cd /source
-git clone https://codeberg.org/dwl/dwl/
-cd dwl
+            <pre><code>cd /source/dwl
 export PKG_CONFIG_PATH=$PKG_CONFIG_PATH:/usr/lib64/pkgconfig
 make</code></pre>
 
@@ -229,35 +249,87 @@ fi</code></pre>
         <section>
             <h3>4. Run dwl</h3>
 
-            <pre><code>cat > /usr/bin/start-dwl <<'EOF'
+            <p>
+                A small launcher script saves you from exporting variables
+                every time you boot. As root, create
+                <code>/usr/bin/start-dwl</code>:
+            </p>
+
+            <pre><code>cat &gt; /usr/bin/start-dwl &lt;&lt;'EOF'
 #!/bin/sh
 
 export LIBSEAT_BACKEND=seatd
-export WLR_RENDERER=pixman
+export WLR_RENDERER=gles2
 export WLR_NO_HARDWARE_CURSORS=1
 
 exec dwl
 EOF
 
-chmod +x /usr/bin/start-dwl
-
-start-dwl</code></pre>
+chmod +x /usr/bin/start-dwl</code></pre>
 
             <p>
-                <code>XDG_RUNTIME_DIR</code> comes from the previous
-                section. In a VM with <code>stdvga</code> there is no real
-                graphics acceleration, and wlroots refuses software
-                rendering by default. Setting
-                <code>WLR_RENDERER=pixman</code> uses its built-in software
-                renderer, which is the most stable choice. The alternative,
-                <code>WLR_RENDERER_ALLOW_SOFTWARE=1</code>, caused garbage
-                on screen and duplicated cursors in our tests.
+                Then start dwl with:
             </p>
 
+            <pre><code>start-dwl</code></pre>
+
             <p>
-                For better results in QEMU, use
+                <code>LIBSEAT_BACKEND=seatd</code> makes wlroots use the
+                seatd service from section 3.1,
+                <code>WLR_RENDERER=gles2</code> uses the GPU renderer (this
+                is why wlroots needs <code>egl</code> and <code>gbm</code>,
+                and mesa needs a driver for your GPU), and
+                <code>WLR_NO_HARDWARE_CURSORS=1</code> draws the cursor in
+                software, which avoids cursor glitches.
+                <code>XDG_RUNTIME_DIR</code> comes from section 3.4.
+            </p>
+        </section>
+
+        <section>
+            <h3>4.1 Running in a virtual machine</h3>
+
+            <p>
+                In a VM without graphics acceleration (such as
+                <code>stdvga</code>), the <code>gles2</code> renderer cannot
+                be used, because wlroots refuses software rendering by
+                default. Change the renderer in
+                <code>/usr/bin/start-dwl</code> to wlroots' built-in software
+                renderer, which is the most stable choice:
+            </p>
+
+            <pre><code>export WLR_RENDERER=pixman</code></pre>
+
+            <p>
+                The alternative, <code>WLR_RENDERER_ALLOW_SOFTWARE=1</code>,
+                caused garbage on screen and duplicated cursors in our
+                tests. For better results in QEMU, use
                 <code>-device virtio-vga</code> instead of
                 <code>stdvga</code>.
+            </p>
+        </section>
+
+        <section>
+            <h3>5. Optional: XWayland</h3>
+
+            <p>
+                To run X11 applications inside dwl, first enable XWayland in
+                the system (see the <a href="xwayland.html">XWayland</a>
+                page). Then, in dwl's <code>config.mk</code>, uncomment these
+                two lines:
+            </p>
+
+            <pre><code>XWAYLAND = -DXWAYLAND
+XLIBS = xcb xcb-icccm</code></pre>
+
+            <p>
+                Rebuild dwl so the change takes effect:
+            </p>
+
+            <pre><code>make clean &amp;&amp; make</code></pre>
+
+            <p>
+                If you installed dwl system-wide, run
+                <code>make install</code> again afterwards.
             </p>
         </section>
 
