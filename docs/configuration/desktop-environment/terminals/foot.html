@@ -46,8 +46,11 @@
             <p>
                 You also need at least one monospace font installed, and a
                 UTF-8 locale (Vind sets <code>LANG=C.UTF-8</code> in
-                <code>/etc/profile</code>).
+                <code>/etc/profile</code>). Install JetBrains Mono with
+                lambda:
             </p>
+
+            <pre><code>lambda mutate append jetbrains-mono-fonts</code></pre>
         </section>
 
         <section>
@@ -107,6 +110,38 @@ ninja -C bld/release install</code></pre>
             <p>
                 Running <code>foot</code> outside a Wayland session fails,
                 because there is no compositor to connect to.
+            </p>
+        </section>
+
+        <section>
+            <h3>4. Configuration</h3>
+
+            <p>
+                foot works without a configuration file, but the default
+                font size is small. Create a basic
+                <code>foot.ini</code> in your user config directory:
+            </p>
+
+            <pre><code>mkdir -p ~/.config/foot
+cat &gt; ~/.config/foot/foot.ini &lt;&lt; 'EOF'
+[main]
+font=monospace:size=18
+login-shell=yes
+EOF</code></pre>
+
+            <p>
+                <code>font=monospace:size=18</code> uses whichever monospace
+                font fontconfig resolves, which will be JetBrains Mono if it
+                is the only one installed. To force it, use
+                <code>font=JetBrains Mono:size=18</code> instead.
+            </p>
+
+            <p>
+                <code>login-shell=yes</code> starts your shell as a login
+                shell, so <code>/etc/profile</code> (and with it
+                <code>LANG</code> and <code>PKG_CONFIG_PATH</code>) is
+                loaded in every foot window. Changes to
+                <code>foot.ini</code> apply to newly opened windows.
             </p>
         </section>
 
