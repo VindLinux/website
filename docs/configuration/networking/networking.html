@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="color-scheme" content="dark">
+    <title>Configuration - Vind Linux</title>
+    <link rel="stylesheet" href="../../../assets/style.css">
+    <link rel="icon" type="image/png" href="/website/assets/logo.png">
+</head>
+<body>
+    <header>
+        <a href="/website/">← Vind Linux</a>
+    </header>
+
+    <nav style="justify-content: center;" class="chapter-bar">
+        <div class="chapter-heading">
+            <h2>Networking on the Final System</h2>
+        </div>
+    </nav>
+
+    <main>
+
+        <section>
+            <p>
+                This guide shows how to get Wi-Fi working on an installed
+                Vind Linux system, and how to make it come up by itself at
+                every boot. Wi-Fi on Vind needs three pieces running under
+                runit: the system <code>dbus-daemon</code>,
+                <code>iwd</code> (which handles the link and
+                authentication) and <code>dhcpcd</code> (which gets the IP
+                address). Run every command as root, in the order shown.
+            </p>
+
+            <p>
+                It assumes you finished the
+                <a href="/website/docs/handbooks/x86_64/">x86_64 Handbook</a>:
+                the packages from chapter 6 (<code>iwd</code>,
+                <code>dbus</code>, <code>dhcpcd</code>,
+                <code>linux-firmware</code>), runit from chapter 11, and the
+                <code>dhcpcd</code> service created there. On a wired
+                connection you only need the <code>dhcpcd</code> service,
+                so this guide is not required.
+            </p>
+        </section>
+
+        <section>
+            <h3>1. Prepare the directories and links</h3>
+
+            <p>
+                Clients look for the system bus socket in
+                <code>/var/run/dbus</code>, while the daemon creates it in
+                <code>/run/dbus</code>. Link one to the other:
+            </p>
+
+            <pre><code>mkdir -p /run/dbus /var/run
+[ /var/run -ef /run ] || ln -sfn /run/dbus /var/run/dbus</code></pre>
+
+            <p>
+                <code>/run</code> is a tmpfs and is empty on every boot, so
+                the <code>/run/dbus</code> directory is recreated by the
+                service in section 3. The link itself lives on disk and
+                only has to be made once. The second line is skipped when
+                <code>/var/run</code> is already a link to
+                <code>/run</code>, where the link would be pointless.
+            </p>
+        </section>
+
+        <section>
+            <h3>2. Prepare D-Bus</h3>
+
+            <p>
+                The system bus drops privileges to a
+                <code>messagebus</code> user and needs a machine ID. Create
+                them only if they are missing:
+            </p>
+
+            <pre><code>id messagebus >/dev/null 2>&amp;1 || {
+    groupadd -r messagebus
+    useradd -r -g messagebus -d /run/dbus -s /sbin/nologin -c 'D-Bus' messagebus
+}
+dbus-uuidgen --ensure</code></pre>
+
+            <p>
+                Then install the D-Bus policy that lets
+                <code>iwd</code> own its name on the bus. The iwd package
+                puts the file in a nested path that D-Bus does not read, so
+                copy it to the right place:
+            </p>
+
+            <pre><code>mkdir -p /usr/share/dbus-1/system.d
+cp /usr/share/dbus-1/dbus-1/system.d/iwd-dbus.conf /usr/share/dbus-1/system.d/</code></pre>
+        </section>
+
+        <section>
+            <h3>3. The D-Bus service</h3>
+
+            <pre><code>mkdir -p /etc/sv/dbus/log/main
+
+cat > /etc/sv/dbus/run &lt;&lt;'EOF'
+#!/bin/sh
+exec 2>&amp;1
+mkdir -p /run/dbus
+exec dbus-daemon --system --nofork --nopidfile
+EOF
+chmod +x /etc/sv/dbus/run
+
+cat > /etc/sv/dbus/log/run &lt;&lt;'EOF'
+#!/bin/sh
+exec svlogd -tt ./main
+EOF
+chmod +x /etc/sv/dbus/log/run
+
+ln -sf /etc/sv/dbus /etc/service/dbus</code></pre>
+
+            <p>
+                <code>--nofork</code> is required for the same reason as
+                in the <code>dhcpcd</code> service: <code>runsv</code>
+                respawns anything that exits, so a daemon that forks into
+                the background looks like a crash. The
+                <code>log/run</code> script is not optional once the
+                <code>log/</code> directory exists.
+            </p>
+
+            <p>
+                If you started <code>dbus-daemon</code> by hand earlier,
+                stop it first, or the service cannot bind the socket.
+                runit starts new services within a few seconds. Then test
+                the bus:
+            </p>
+
+            <pre><code>sv status dbus
+dbus-send --system --print-reply --dest=org.freedesktop.DBus /org/freedesktop/DBus org.freedesktop.DBus.GetId</code></pre>
+
+            <p>
+                The second command must print a UUID. If you edit the
+                policy files later, make the daemon reread them with
+                <code>sv hup dbus</code> instead of starting another
+                instance.
+            </p>
+        </section>
+
+        <section>
+            <h3>4. The iwd service</h3>
+
+            <pre><code>mkdir -p /etc/sv/iwd/log/main
+
+cat > /etc/sv/iwd/run &lt;&lt;'EOF'
+#!/bin/sh
+exec 2>&amp;1
+[ -S /run/dbus/system_bus_socket ] || { sleep 2; exit 1; }
+exec /usr/libexec/iwd
+EOF
+chmod +x /etc/sv/iwd/run
+
+cat > /etc/sv/iwd/log/run &lt;&lt;'EOF'
+#!/bin/sh
+exec svlogd -tt ./main
+EOF
+chmod +x /etc/sv/iwd/log/run
+
+ln -sf /etc/sv/iwd /etc/service/iwd</code></pre>
+
+            <p>
+                runit has no dependencies between services, so the
+                <code>run</code> script waits for the D-Bus socket itself:
+                if it is not there yet, the script sleeps and exits, and
+                <code>runsv</code> tries again. This is what keeps the boot
+                order correct.
+            </p>
+
+            <pre><code>sv status dbus iwd dhcpcd</code></pre>
+
+            <p>
+                All three must say <code>run</code>.
+            </p>
+        </section>
+
+        <section>
+            <h3>5. Connect to the network</h3>
+
+            <pre><code>iwctl</code></pre>
+
+            <p>
+                Inside the client (replace <code>wlan0</code> with the name
+                shown by <code>device list</code>):
+            </p>
+
+            <pre><code>device list
+station wlan0 scan
+station wlan0 get-networks
+station wlan0 connect "WIFI_NAME"</code></pre>
+
+            <p>
+                <code>iwctl</code> asks for the passphrase and
+                <code>iwd</code> saves the network in
+                <code>/var/lib/iwd</code>. From then on it reconnects by
+                itself every time the service starts, so you only do this
+                once.
+            </p>
+        </section>
+
+        <section>
+            <h3>6. Get an IP address and test</h3>
+
+            <p>
+                The <code>dhcpcd</code> service from the handbook watches
+                all interfaces and asks for an address as soon as the link
+                comes up, so nothing else is needed:
+            </p>
+
+            <pre><code>ip addr show wlan0
+ping -c 3 1.1.1.1</code></pre>
+
+            <p>
+                If the interface has no address and you have not created
+                the <code>dhcpcd</code> service, ask for one by hand
+                instead:
+            </p>
+
+            <pre><code>udhcpc -i wlan0</code></pre>
+
+            <p>
+                Do not run it together with the <code>dhcpcd</code>
+                service, since both would fight over the interface.
+            </p>
+        </section>
+
+        <section>
+            <h3>7. Check it after a reboot</h3>
+
+            <pre><code>reboot</code></pre>
+
+            <p>
+                After logging in, without running anything by hand:
+            </p>
+
+            <pre><code>sv status dbus iwd dhcpcd
+iwctl station wlan0 show
+ping -c 3 1.1.1.1</code></pre>
+
+            <p>
+                The station must be <code>connected</code> to your network
+                and the ping must answer.
+            </p>
+        </section>
+
+        <section>
+            <h3>8. Troubleshooting</h3>
+
+            <p>
+                <code>iwctl</code> cannot connect, or shows no devices
+                even though the card exists: check the services and the
+                socket, then read the logs.
+            </p>
+
+            <pre><code>sv status dbus iwd
+ls -l /run/dbus/system_bus_socket
+tail -n 30 /etc/sv/dbus/log/main/current
+tail -n 30 /etc/sv/iwd/log/main/current</code></pre>
+
+            <p>
+                <code>iwd</code> keeps restarting: it is waiting for a
+                D-Bus socket that does not exist. Fix the
+                <code>dbus</code> service first.
+            </p>
+
+            <p>
+                An <code>AccessDenied</code> error, or a message that
+                <code>net.connman.iwd</code> cannot be owned: the policy
+                file from section 2 is missing. Copy it, then reload:
+            </p>
+
+            <pre><code>sv hup dbus
+sv restart iwd</code></pre>
+
+            <p>
+                <code>iwctl device list</code> is empty: there is no
+                wireless interface. Check that <code>ip link</code> shows
+                it, that <code>linux-firmware</code> is installed, and look
+                for firmware errors in <code>dmesg</code>.
+            </p>
+
+            <pre><code>ip link
+dmesg | grep -i firmware</code></pre>
+
+            <p>
+                Connected, but no address: check
+                <code>sv status dhcpcd</code> and its log in
+                <code>/etc/sv/dhcpcd/log/main/current</code>.
+            </p>
+
+            <p>
+                Name resolution fails while pinging an IP works: see
+                <code>/etc/resolv.conf</code> in the handbook's
+                <a href="/website/docs/handbooks/x86_64/networking.html">Networking</a>
+                chapter.
+            </p>
+        </section>
+
+    </main>
+
+    <nav style="justify-content: center;" class="chapter-bar chapter-bar-bottom">
+        <div class="chapter-heading">
+            <h2>Networking on the Final System</h2>
+        </div>
+    </nav>
+
+    <footer>
+        <a href="/website/">Home</a>
+        <a href="/website/docs/">Documentation</a>
+        <a href="/website/docs/handbooks/x86_64/">x86_64 Handbook</a>
+        <a href="/website/license/">License</a>
+    </footer>
+</body>
+</html>
