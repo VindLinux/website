@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="color-scheme" content="dark">
+    <title>Configuration - Vind Linux</title>
+    <link rel="stylesheet" href="../../../assets/style.css">
+	<link rel="icon" type="image/png" href="/website/assets/logo.png">
+</head>
+<body>
+    <header>
+        <a href="/website/">← Vind Linux</a>
+    </header>
+
+    <nav style="justify-content: center;" class="chapter-bar">
+		<div class="chapter-heading">
+			<h2>mesa</h2>
+		</div>
+    </nav>
+
+    <main>
+
+        <section>
+            <p>
+                mesa provides the graphics libraries and drivers (OpenGL,
+                Vulkan, EGL, GBM) that Wayland compositors and many
+                applications rely on. wlroots, and therefore
+                <a href="/website/docs/configuration/desktop-environment/wms/dwl.html">dwl</a>, depends on it, so it is
+                installed automatically. What you need to choose yourself is
+                which GPU driver to build.
+            </p>
+        </section>
+
+        <section>
+            <h3>1. Choose your GPU driver</h3>
+
+            <p>
+                GPU drivers are optional attrs of the mesa package, and none
+                is enabled by default. Pick the one that matches your
+                graphics hardware:
+            </p>
+
+            <p>
+                <code>intel</code> for Intel graphics, and
+                <code>amdgpu</code> for AMD graphics. Without a driver for
+                your GPU, graphics fall back to software rendering, which is
+                much slower. Enabling <code>amdgpu</code> requires LLVM with
+                AMD support, so the first build takes noticeably longer.
+            </p>
+        </section>
+
+        <section>
+            <h3>2. Enable the attrs</h3>
+
+            <p>
+                Add the driver to <code>/etc/lambda/package.compattrs</code>.
+                For example, for both Intel and AMD:
+            </p>
+
+            <pre><code>mesa intel amdgpu</code></pre>
+
+            <p>
+                Or, to enable it for every package, add this to
+                <code>/etc/lambda/make.conf</code>:
+            </p>
+
+            <pre><code>COMP_ATTRS="intel amdgpu"</code></pre>
+
+            <p>
+                Use only the attrs that apply to your machine. Then rebuild
+                the packages:
+            </p>
+
+            <pre><code>lambda reconcile</code></pre>
+
+            <p>
+                To confirm, run <code>lambda info mesa</code> and check that
+                the driver now appears under the enabled compattrs.
+            </p>
+        </section>
+
+        <section>
+            <h3>3. Virtual machines</h3>
+
+            <p>
+                In a VM without graphics acceleration (such as
+                <code>stdvga</code>), none of these drivers applies, and
+                dwl has to use the software renderer instead. See the
+                <a href="/website/docs/configuration/desktop-environment/wms/dwl.html">dwl</a> page for the
+                <code>pixman</code> setting.
+            </p>
+        </section>
+
+    </main>
+
+    <nav style="justify-content: center;" class="chapter-bar chapter-bar-bottom">
+        <div class="chapter-heading">
+            <h2>mesa</h2>
+        </div>
+    </nav>
+
+    <footer>
+        <a href="/website/">Home</a>
+        <a href="/website/docs/">Documentation</a>
+        <a href="/website/docs/handbooks/x86_64/">x86_64 Handbook</a>
+        <a href="/website/license/">License</a>
+    </footer>
+</body>
+</html>

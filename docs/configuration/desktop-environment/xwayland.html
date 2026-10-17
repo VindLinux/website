@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="color-scheme" content="dark">
+    <meta name="description" content="Configure XWayland on Vind Linux to run X11 applications in a Wayland session.">
+    <title>XWayland - Vind Linux</title>
+    <link rel="stylesheet" href="../../../assets/style.css">
+    <link rel="icon" type="image/png" href="/website/assets/logo.png">
+</head>
+<body>
+    <header>
+        <a href="/website/">← Vind Linux</a>
+    </header>
+
+    <nav class="chapter-bar" style="justify-content: center;">
+        <div class="chapter-heading">
+            <h2>XWayland</h2>
+        </div>
+    </nav>
+
+    <main>
+        <section>
+            <p>
+                XWayland is an X server that runs as a Wayland client, allowing
+                applications designed for X11 to run alongside native Wayland
+                applications. It provides compatibility with software that
+                does not support Wayland natively.
+            </p>
+
+            <p>
+                On Vind Linux, XWayland requires support from both
+                <code>wlroots</code> and your compositor. The configuration
+                below uses <code>dwl</code> as an example, but the same
+                principles apply to other compositors that support XWayland.
+            </p>
+        </section>
+
+        <section>
+            <h3>1. Build wlroots with XWayland support</h3>
+
+            <p>
+                XWayland support is an optional compattr in
+                <code>wlroots</code> and is not enabled by default.
+                Add <code>xwayland</code> to the existing
+                <code>wlroots</code> entry in
+                <code>/etc/lambda/package.compattrs</code>.
+            </p>
+
+            <p>
+                For example, if you are following the
+                <a href="/website/docs/configuration/desktop-environment/wms/dwl.html">dwl configuration guide</a>,
+                your entries can look like this:
+            </p>
+
+            <pre><code>wlroots egl gbm xwayland
+xwayland glamor glx</code></pre>
+
+            <p>
+                The first line enables XWayland support in
+                <code>wlroots</code>, while the second enables the optional
+                <code>glamor</code> and <code>glx</code> features when
+                building the <code>xwayland</code> package. These features
+                are recommended when supported by the package configuration.
+            </p>
+
+            <p>
+                Keep any existing attributes on the corresponding lines.
+                If an entry for either package already exists, update it
+                instead of adding a duplicate.
+            </p>
+
+            <p>
+                Alternatively, you can configure attributes globally in
+                <code>/etc/lambda/make.conf</code> using
+                <code>COMP_ATTRS</code>:
+            </p>
+
+            <pre><code>COMP_ATTRS="egl gbm xwayland glamor glx"</code></pre>
+
+            <p>
+                This setting applies globally, so package-specific
+                configuration through <code>package.compattrs</code> is
+                preferable when you only want to enable these features
+                for the relevant packages. If you use
+                <code>COMP_ATTRS</code>, preserve your existing attributes
+                and keep them in a single assignment.
+            </p>
+
+            <p>
+                Rebuild the affected packages and reconcile the system:
+            </p>
+
+            <pre><code>lambda reconcile</code></pre>
+
+            <p>
+                Verify the result with:
+            </p>
+
+            <pre><code>lambda info wlroots
+lambda info xwayland</code></pre>
+
+            <p>
+                The <code>wlroots</code> package should list
+                <code>xwayland</code> among its enabled compattrs, and
+                <code>xwayland</code> should be installed with the
+                requested build features enabled.
+            </p>
+        </section>
+
+        <section>
+            <h3>2. Enable XWayland in your compositor</h3>
+
+            <p>
+                Building <code>wlroots</code> with XWayland support is not
+                enough. Your compositor must also initialize and manage
+                XWayland.
+            </p>
+
+            <p>
+                For <code>dwl</code>, enable the relevant XWayland
+                configuration in <code>config.mk</code> and rebuild the
+                compositor. Follow the
+                <a href="/website/docs/configuration/desktop-environment/wms/dwl.html">dwl configuration guide</a>
+                for the exact changes.
+            </p>
+
+            <p>
+                Other compositors may enable XWayland differently. Consult
+                the configuration instructions for your compositor if it
+                does not use the same build options as <code>dwl</code>.
+            </p>
+        </section>
+
+        <section>
+            <h3>3. Test XWayland</h3>
+
+            <p>
+                Install <code>xeyes</code>, available in the Vind Linux
+                package repository, and run it from a terminal inside your
+                Wayland session:
+            </p>
+
+            <pre><code>xeyes</code></pre>
+
+            <p>
+                If a window containing two eyes appears and follows your
+                cursor, XWayland is working.
+            </p>
+
+            <p>
+                If the application reports
+                <code>Can't open display</code>, verify that
+                <code>wlroots</code> was rebuilt with the
+                <code>xwayland</code> compattr and that your compositor
+                was built and configured to start XWayland. Also make sure
+                you are launching the application from the active graphical
+                session.
+            </p>
+        </section>
+    </main>
+
+    <nav class="chapter-bar chapter-bar-bottom" style="justify-content: center;">
+        <div class="chapter-heading">
+            <h2>XWayland</h2>
+        </div>
+    </nav>
+
+    <footer>
+        <a href="/website/">Home</a>
+        <a href="/website/docs/">Documentation</a>
+        <a href="/website/docs/handbooks/x86_64/">x86_64 Handbook</a>
+        <a href="/website/license/">License</a>
+    </footer>
+</body>
+</html>
