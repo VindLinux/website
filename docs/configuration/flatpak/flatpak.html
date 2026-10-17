@@ -27,8 +27,8 @@
         <p>
             This guide shows how to install
             <a href="https://flatpak.org/">Flatpak</a> on Vind Linux and
-            use it to run applications that are not packaged for lambda,
-            such as Firefox. Flatpak itself is installed through lambda;
+            use it to run applications that are not packaged for lambda.
+            Flatpak itself is installed through lambda;
             the applications are downloaded already compiled from
             <a href="https://flathub.org/">Flathub</a>, so nothing has to
             be built from source. Run the commands that change the
@@ -232,19 +232,25 @@ fi</code></pre>
         <pre><code>flatpak --user remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo</code></pre>
 
         <p>
-            Then install Firefox. Flatpak also downloads the runtime the
-            application needs (<code>org.freedesktop.Platform</code>),
-            which takes between 1 and 2 GB, so check the free space in
-            your home first:
+            Then install an application by its ID, which you can find with
+            <code>flatpak search</code> or on
+            <a href="https://flathub.org/">flathub.org</a>. Flatpak also
+            downloads the runtime the application needs
+            (<code>org.freedesktop.Platform</code>), which takes between
+            1 and 2 GB, so check the free space in your home first:
         </p>
 
         <pre><code>df -h /home
-flatpak --user install flathub org.mozilla.firefox</code></pre>
+flatpak --user search &lt;name&gt;
+flatpak --user install flathub &lt;application-id&gt;</code></pre>
 
 
         <p>
             Flatpak asks to confirm the runtime and then the application.
-            Add <code>-y</code> to answer yes to all questions.
+            Add <code>-y</code> to answer yes to all questions. For a
+            complete example, see the
+            <a href="/website/docs/configuration/browsers/firefox.html">Firefox
+            guide</a>.
         </p>
     </section>
 
@@ -257,7 +263,7 @@ flatpak --user install flathub org.mozilla.firefox</code></pre>
             <code>Alt+Shift+Enter</code> and run:
         </p>
 
-        <pre><code>flatpak run org.mozilla.firefox</code></pre>
+        <pre><code>flatpak run &lt;application-id&gt;</code></pre>
 
         <p>
             The application uses the D-Bus session created by the
@@ -265,9 +271,9 @@ flatpak --user install flathub org.mozilla.firefox</code></pre>
         </p>
 
         <p>
-            In a VM without graphics acceleration Firefox uses software
-            rendering and is slow, but it works. On real hardware it
-            runs normally.
+            In a VM without graphics acceleration, applications use
+            software rendering and are slow, but they work. On real
+            hardware they run normally.
         </p>
 
         <p>
@@ -275,7 +281,7 @@ flatpak --user install flathub org.mozilla.firefox</code></pre>
         </p>
 
         <pre><code>flatpak --user list
-flatpak --user uninstall org.mozilla.firefox
+flatpak --user uninstall &lt;application-id&gt;
 flatpak --user uninstall --unused</code></pre>
     </section>
 
