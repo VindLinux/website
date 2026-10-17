@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="color-scheme" content="dark">
+    <title>Configuration - Vind Linux</title>
+    <link rel="stylesheet" href="../../../assets/style.css">
+    <link rel="icon" type="image/png" href="/website/assets/logo.png">
+</head>
+<body>
+    <header>
+        <a href="/website/">← Vind Linux</a>
+    </header>
+
+    <nav style="justify-content: center;" class="chapter-bar">
+        <div class="chapter-heading">
+            <h2>Firefox</h2>
+        </div>
+    </nav>
+
+    <main>
+
+        <section>
+            <p>
+                This guide shows how to install
+                <a href="https://www.mozilla.org/firefox/">Firefox</a> on
+                Vind Linux. Firefox is not packaged for lambda, so it is
+                installed as a Flatpak from
+                <a href="https://flathub.org/">Flathub</a>: the application
+                is downloaded already compiled and nothing has to be built
+                from source. Run the commands as your normal user.
+            </p>
+        </section>
+
+        <section>
+            <h3>1. Requirements</h3>
+
+            <p>
+                Set up <a href="/website/docs/configuration/flatpak/flatpak.html">Flatpak</a>
+                first, including the D-Bus session, the
+                <code>XDG_DATA_DIRS</code> variable and the Flathub
+                repository. Firefox is a graphical application, so you also
+                need a working
+                <a href="/website/docs/configuration/desktop-environment/wms/dwl.html">dwl</a>
+                session.
+            </p>
+
+            <p>
+                Firefox and its runtime take between 1 and 2 GB, so check
+                the free space in your home:
+            </p>
+
+            <pre><code>df -h /home</code></pre>
+        </section>
+
+        <section>
+            <h3>2. Install Firefox</h3>
+
+            <pre><code>flatpak --user install flathub org.mozilla.firefox</code></pre>
+
+            <p>
+                Flatpak asks to confirm the runtime
+                (<code>org.freedesktop.Platform</code>) and then the
+                application. Add <code>-y</code> to answer yes to all
+                questions. Check that it was installed:
+            </p>
+
+            <pre><code>flatpak --user list</code></pre>
+        </section>
+
+        <section>
+            <h3>3. Run Firefox</h3>
+
+            <p>
+                Inside the dwl session (opened with
+                <code>start-dwl</code>), open a terminal with
+                <code>Alt+Shift+Enter</code> and run:
+            </p>
+
+            <pre><code>flatpak run org.mozilla.firefox</code></pre>
+
+            <p>
+                In a VM without graphics acceleration Firefox uses software
+                rendering and is slow, but it works. On real hardware it
+                runs normally.
+            </p>
+        </section>
+
+        <section>
+            <h3>4. Optional: a shorter command</h3>
+
+            <p>
+                Vind has no launcher, so typing the full Flatpak command
+                every time gets tedious. As root, create a small wrapper:
+            </p>
+
+            <pre><code>cat > /usr/bin/firefox <<'EOF'
+#!/bin/sh
+exec flatpak run org.mozilla.firefox "$@"
+EOF
+
+chmod +x /usr/bin/firefox</code></pre>
+
+            <p>
+                Now <code>firefox</code> starts it from any terminal, and
+                accepts arguments such as an address:
+            </p>
+
+            <pre><code>firefox https://example.com</code></pre>
+
+            <p>
+                The wrapper runs <code>flatpak run</code> as whichever user
+                calls it, so Firefox must be installed for that user.
+            </p>
+        </section>
+
+        <section>
+            <h3>5. Update and remove</h3>
+
+            <pre><code>flatpak --user update
+flatpak --user uninstall org.mozilla.firefox
+flatpak --user uninstall --unused</code></pre>
+
+            <p>
+                Your profile is kept in
+                <code>~/.var/app/org.mozilla.firefox</code>, so it survives
+                updates. It is not removed by <code>uninstall</code> unless
+                you add <code>--delete-data</code>.
+            </p>
+        </section>
+
+        <section>
+            <h3>6. Troubleshooting</h3>
+
+            <p>
+                <code>Cannot autolaunch D-Bus without X11 $DISPLAY</code>,
+                or Firefox opens and closes immediately: the D-Bus session
+                is not reachable. Follow the troubleshooting section of the
+                <a href="/website/docs/configuration/flatpak/flatpak.html">Flatpak guide</a>
+                and check:
+            </p>
+
+            <pre><code>sv status dbus-session
+echo "$DBUS_SESSION_BUS_ADDRESS"</code></pre>
+
+            <p>
+                <code>bwrap: No permissions to create new namespace</code>:
+                user namespaces are disabled. Redo the kernel checks in the
+                Flatpak guide.
+            </p>
+
+            <p>
+                Firefox opens through XWayland or looks blurry: force it
+                to use Wayland natively.
+            </p>
+
+            <pre><code>flatpak override --user --env=MOZ_ENABLE_WAYLAND=1 org.mozilla.firefox</code></pre>
+
+            <p>
+                Letters appear as empty boxes or the wrong font is used:
+                no fonts are installed for it to use. Install some with
+                lambda, for example
+                <code>lambda mutate append jetbrains-mono-fonts</code>, as
+                in the <a href="/website/docs/configuration/desktop-environment/terminals/foot.html">foot guide</a>.
+            </p>
+        </section>
+
+    </main>
+
+    <nav style="justify-content: center;" class="chapter-bar chapter-bar-bottom">
+        <div class="chapter-heading">
+            <h2>Firefox</h2>
+        </div>
+    </nav>
+
+    <footer>
+        <a href="/website/">Home</a>
+        <a href="/website/docs/">Documentation</a>
+        <a href="/website/docs/handbooks/x86_64/">x86_64 Handbook</a>
+        <a href="/website/license/">License</a>
+    </footer>
+</body>
+</html>
