@@ -88,7 +88,28 @@
         </section>
 
         <section>
-            <h3>4. Optional: a shorter command</h3>
+            <h3>4. Access your files</h3>
+
+            <p>
+                Flatpak runs Firefox in a sandbox, so it can only see a few
+                folders, such as Downloads. To let it open and save files
+                anywhere in your home, for example to upload a file from
+                another folder:
+            </p>
+
+            <pre><code>flatpak override --user --filesystem=home org.mozilla.firefox</code></pre>
+
+            <p>
+                This gives Firefox read and write access to your whole home
+                directory, which weakens the sandbox. The change applies
+                the next time Firefox starts. To undo it:
+            </p>
+
+            <pre><code>flatpak override --user --reset org.mozilla.firefox</code></pre>
+        </section>
+
+        <section>
+            <h3>5. Optional: a shorter command</h3>
 
             <p>
                 Vind has no launcher, so typing the full Flatpak command
@@ -116,7 +137,7 @@ chmod +x /usr/bin/firefox</code></pre>
         </section>
 
         <section>
-            <h3>5. Update and remove</h3>
+            <h3>6. Update and remove</h3>
 
             <pre><code>flatpak --user update
 flatpak --user uninstall org.mozilla.firefox
@@ -131,7 +152,7 @@ flatpak --user uninstall --unused</code></pre>
         </section>
 
         <section>
-            <h3>6. Troubleshooting</h3>
+            <h3>7. Troubleshooting</h3>
 
             <p>
                 <code>Cannot autolaunch D-Bus without X11 $DISPLAY</code>,
