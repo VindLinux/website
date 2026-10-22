@@ -263,6 +263,26 @@ wpctl set-volume @DEFAULT_AUDIO_SINK@ 70%</code></pre>
 amixer -c 0 sset Master unmute</code></pre>
 
             <p>
+                To unmute the card automatically at every login, add
+                the same commands to
+                <code>~/.config/dwl/autostart.sh</code>, before the
+                PipeWire lines. Use only the control names listed by
+                <code>amixer -c 0 scontrols</code> (the ones below are
+                common on laptops). <code>unmute</code> does not change
+                the volume, only the mute state:
+            </p>
+
+            <pre><code>amixer -c 0 sset Master unmute
+amixer -c 0 sset Headphone unmute
+amixer -c 0 sset Speaker unmute</code></pre>
+
+            <p>
+                A control that does not exist on your card only prints an
+                error and does not stop the script. These commands finish
+                right away, so they do not need <code>&amp;</code>.
+            </p>
+
+            <p>
                 While PipeWire is running it holds the sound card, so
                 <code>aplay</code> fails with <code>Resource busy</code>.
                 This is expected. Use <code>pw-play</code> or
