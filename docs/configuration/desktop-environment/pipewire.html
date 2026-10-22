@@ -172,8 +172,12 @@ sleep 1
 pipewire-pulse &amp;</code></pre>
 
             <p>
-                Each command ends with <code>&amp;</code> so the script
-                does not wait for it. The services start with the session
+                Each command must end with <code>&amp;</code>. Without it
+                the script waits for that program to exit, and every line
+                after it (including the other audio services) never runs.
+                This also applies to any other program you keep in the
+                same script, such as a wallpaper setter, which has to
+                come with <code>&amp;</code> as well. The services start with the session
                 and also have access to the D-Bus session bus created by
                 <code>start-dwl</code>. <code>XDG_RUNTIME_DIR</code> must
                 be set (the dwl guide does this in
@@ -339,6 +343,15 @@ amixer -c 0 sset Master unmute</code></pre>
                 yet (log in again and check <code>id</code>),
                 <code>udevd</code> is not running, or PipeWire was built
                 without <code>alsa</code> and <code>udev</code>.
+            </p>
+
+            <p>
+                No audio processes after logging in and
+                <code>Could not connect to PipeWire</code> in
+                <code>wpctl status</code>: the <code>autostart.sh</code>
+                script is stuck on a command without
+                <code>&amp;</code> that comes before the PipeWire lines.
+                Add <code>&amp;</code> to it (section 4).
             </p>
 
             <p>

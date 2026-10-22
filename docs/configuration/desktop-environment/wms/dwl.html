@@ -326,6 +326,16 @@ cat &gt; ~/.config/dwl/autostart.sh &lt;&lt;'EOF'
 EOF</code></pre>
 
             <p>
+                Every program that keeps running, such as a wallpaper
+                setter, must be followed by <code>&amp;</code>. Without
+                it the script waits for that program to exit and never
+                reaches the lines after it. For example, this starts the
+                wallpaper in the background and then continues:
+            </p>
+
+            <pre><code>swaybg -i "$HOME/Pictures/wallpaper.png" &amp;</code></pre>
+
+            <p>
                 For example, the
                 <a href="/website/docs/configuration/desktop-environment/pipewire.html">PipeWire</a>
                 page adds the audio services here. Changes to the script
