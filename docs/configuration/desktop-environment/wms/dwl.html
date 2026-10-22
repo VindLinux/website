@@ -259,45 +259,101 @@ fi</code></pre>
 #!/bin/sh
 
 export LIBSEAT_BACKEND=seatd
-export WLR_RENDERER=gles2
 export WLR_NO_HARDWARE_CURSORS=1
+# export WLR_RENDERER=pixman
+export WLR_RENDERER=gles2
 
-exec dwl
+. "$HOME/.profile"
+exec dbus-run-session -- dwl -s 'sh ~/.config/dwl/autostart.sh &lt;&amp;-'
 EOF
 
 chmod +x /usr/bin/start-dwl</code></pre>
+
+            <p>
+                The script does the following:
+            </p>
+
+            <p>
+                <code>LIBSEAT_BACKEND=seatd</code> makes wlroots use the
+                seatd service from section 3.1.
+                <code>WLR_RENDERER=gles2</code> uses the GPU renderer (this
+                is why wlroots needs <code>egl</code> and <code>gbm</code>,
+                and mesa needs a driver for your GPU).
+                <code>WLR_NO_HARDWARE_CURSORS=1</code> draws the cursor in
+                software, which avoids cursor glitches.
+                <code>XDG_RUNTIME_DIR</code> comes from section 3.4.
+            </p>
+
+            <p>
+                <code>. "$HOME/.profile"</code> loads your own environment
+                variables into the session. The file must exist, so create
+                it with <code>touch ~/.profile</code> if you do not have
+                one yet.
+            </p>
+
+            <p>
+                <code>dbus-run-session</code> starts a private D-Bus
+                session bus and runs dwl inside it, so every program
+                launched from the session can reach it. It is provided by
+                the <code>dbus</code> package.
+            </p>
+
+            <p>
+                <code>-s</code> tells dwl to run a command when it starts.
+                Here it runs the autostart script described below. dwl
+                connects the standard input of that command to a pipe and
+                writes status information to it; if nothing reads it, dwl
+                freezes after a while. The <code>&lt;&amp;-</code> at the
+                end closes that input and avoids the problem.
+            </p>
+        </section>
+
+        <section>
+            <h3>4.1 The autostart script</h3>
+
+            <p>
+                Programs that should start together with dwl go in
+                <code>~/.config/dwl/autostart.sh</code>. Create it as your
+                normal user, not as root:
+            </p>
+
+            <pre><code>mkdir -p ~/.config/dwl
+cat &gt; ~/.config/dwl/autostart.sh &lt;&lt;'EOF'
+#!/bin/sh
+
+# programs started together with dwl go here, one per line,
+# each followed by &amp; so the script does not wait for it
+EOF</code></pre>
+
+            <p>
+                For example, the
+                <a href="/website/docs/configuration/desktop-environment/pipewire.html">PipeWire</a>
+                page adds the audio services here. Changes to the script
+                apply the next time you run <code>start-dwl</code>.
+            </p>
 
             <p>
                 Then start dwl with:
             </p>
 
             <pre><code>start-dwl</code></pre>
-
-            <p>
-                <code>LIBSEAT_BACKEND=seatd</code> makes wlroots use the
-                seatd service from section 3.1,
-                <code>WLR_RENDERER=gles2</code> uses the GPU renderer (this
-                is why wlroots needs <code>egl</code> and <code>gbm</code>,
-                and mesa needs a driver for your GPU), and
-                <code>WLR_NO_HARDWARE_CURSORS=1</code> draws the cursor in
-                software, which avoids cursor glitches.
-                <code>XDG_RUNTIME_DIR</code> comes from section 3.4.
-            </p>
         </section>
 
         <section>
-            <h3>4.1 Running in a virtual machine</h3>
+            <h3>4.2 Running in a virtual machine</h3>
 
             <p>
                 In a VM without graphics acceleration (such as
                 <code>stdvga</code>), the <code>gles2</code> renderer cannot
                 be used, because wlroots refuses software rendering by
-                default. Change the renderer in
-                <code>/usr/bin/start-dwl</code> to wlroots' built-in software
-                renderer, which is the most stable choice:
+                default. In <code>/usr/bin/start-dwl</code>, comment out the
+                <code>gles2</code> line and uncomment the
+                <code>pixman</code> line, which selects the built-in
+                software renderer of wlroots and is the most stable choice:
             </p>
 
-            <pre><code>export WLR_RENDERER=pixman</code></pre>
+            <pre><code>export WLR_RENDERER=pixman
+# export WLR_RENDERER=gles2</code></pre>
 
             <p>
                 The alternative, <code>WLR_RENDERER_ALLOW_SOFTWARE=1</code>,
