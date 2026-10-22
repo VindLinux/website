@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="color-scheme" content="dark">
+    <meta name="description" content="Install and configure PipeWire and WirePlumber on Vind Linux for desktop audio.">
+    <title>PipeWire - Vind Linux</title>
+    <link rel="stylesheet" href="../../../assets/style.css">
+    <link rel="icon" type="image/png" href="/website/assets/logo.png">
+</head>
+<body>
+    <header>
+        <a href="/website/">← Vind Linux</a>
+    </header>
+
+    <nav style="justify-content: center;" class="chapter-bar">
+        <div class="chapter-heading">
+            <h2>PipeWire</h2>
+        </div>
+    </nav>
+
+    <main>
+
+        <section>
+            <p>
+                PipeWire is a low-latency multimedia server that handles
+                audio and video streams. It provides compatibility layers
+                for ALSA, PulseAudio and JACK, so most applications work
+                without changes. This guide covers a basic desktop audio
+                setup: speakers and wired headphones (3.5 mm or USB). It
+                assumes you already followed the
+                <a href="/website/docs/configuration/desktop-environment/wms/dwl.html">dwl</a>
+                guide, which sets up udev, seatd and
+                <code>XDG_RUNTIME_DIR</code>.
+            </p>
+
+            <p>
+                A working setup needs three programs running as your normal
+                user: <code>pipewire</code> (the server),
+                <code>wireplumber</code> (the session manager, which decides
+                where sound goes and switches outputs when you plug in
+                headphones) and <code>pipewire-pulse</code> (the PulseAudio
+                compatibility layer used by browsers, Discord, Steam and
+                others).
+            </p>
+        </section>
+
+        <section>
+            <h3>1. Enable the compattrs</h3>
+
+            <p>
+                The optional features of <code>pipewire</code> are
+                compattrs, and none is enabled by default. For basic audio
+                you need four of them:
+            </p>
+
+            <p>
+                <code>alsa</code> talks to the sound drivers of the kernel;
+                without it no sound is produced. <code>udev</code> detects
+                devices when you plug or unplug them.
+                <code>pulse</code> enables the PulseAudio compatibility
+                layer. <code>sndfile</code> enables utilities such as
+                <code>pw-play</code>, which are useful for testing.
+            </p>
+
+            <p>
+                Add them to <code>/etc/lambda/package.compattrs</code>:
+            </p>
+
+            <pre><code>pipewire alsa udev pulse sndfile</code></pre>
+
+            <p>
+                Or, to enable them for every package, add this to
+                <code>/etc/lambda/make.conf</code>:
+            </p>
+
+            <pre><code>COMP_ATTRS="alsa udev pulse sndfile"</code></pre>
+
+            <p>
+                Keep any existing attributes, and if an entry for
+                <code>pipewire</code> already exists, update it instead of
+                adding a duplicate. Everything else (Bluetooth, codecs,
+                JACK, cameras, and so on) is optional and can stay
+                disabled for this setup.
+            </p>
+        </section>
+
+        <section>
+            <h3>2. Install PipeWire and WirePlumber</h3>
+
+            <pre><code>lambda install pipewire wireplumber</code></pre>
+
+            <p>
+                To confirm, run <code>lambda info pipewire</code> and check
+                that the four compattrs appear under the enabled
+                compattrs. WirePlumber is required: without a session
+                manager, PipeWire starts but does not connect anything.
+            </p>
+        </section>
+
+        <section>
+            <h3>3. Add your user to the audio group</h3>
+
+            <p>
+                The device nodes in <code>/dev/snd</code> belong to the
+                <code>audio</code> group. If your user is not a member,
+                PipeWire cannot open the sound card and falls back to a
+                useless <code>Dummy Output</code>. The group is created in
+                section 3.2 of the
+                <a href="/website/docs/configuration/desktop-environment/wms/dwl.html">dwl</a>
+                guide; if it does not exist yet, create it with
+                <code>addgroup -g 29 audio</code>. Then, as root (replace
+                <code>gumi</code> with your user):
+            </p>
+
+            <pre><code>addgroup gumi audio</code></pre>
+
+            <p>
+                New groups only apply after a new login. Log out and log
+                back in, then check:
+            </p>
+
+            <pre><code>id</code></pre>
+
+            <p>
+                <code>audio</code> must appear in the list. Do not rely on
+                <code>groups user</code>: with a user name it reads the
+                system group file and does not show the groups of your
+                current session.
+            </p>
+
+            <p>
+                The sound card must also be visible to udev, so
+                <code>udevd</code> has to be running as described in the
+                dwl guide.
+            </p>
+        </section>
+
+        <section>
+            <h3>4. Start the services</h3>
+
+            <p>
+                PipeWire, WirePlumber and pipewire-pulse run as your normal
+                user, never as root, so they are not runit services. The
+                order matters: the PulseAudio layer needs the server to be
+                running already, otherwise it fails with
+                <code>can't connect: Host is down</code>. To try them by
+                hand inside your session:
+            </p>
+
+            <pre><code>pipewire &amp;
+sleep 1
+wireplumber &amp;
+sleep 1
+pipewire-pulse &amp;</code></pre>
+
+            <p>
+                To start them automatically, add the same commands to
+                <code>~/.config/dwl/autostart.sh</code>, the script that
+                <code>start-dwl</code> runs when dwl starts (see the
+                <a href="/website/docs/configuration/desktop-environment/wms/dwl.html">dwl</a>
+                guide):
+            </p>
+
+            <pre><code>#!/bin/sh
+
+pipewire &amp;
+sleep 1
+wireplumber &amp;
+sleep 1
+pipewire-pulse &amp;</code></pre>
+
+            <p>
+                Each command ends with <code>&amp;</code> so the script
+                does not wait for it. The services start with the session
+                and also have access to the D-Bus session bus created by
+                <code>start-dwl</code>. <code>XDG_RUNTIME_DIR</code> must
+                be set (the dwl guide does this in
+                <code>/etc/profile</code>), because PipeWire creates its
+                sockets in it, including the PulseAudio one at
+                <code>$XDG_RUNTIME_DIR/pulse/native</code>.
+            </p>
+
+            <p>
+                If you need to restart everything, stop the old processes
+                first so a stale instance does not keep running:
+            </p>
+
+            <pre><code>pkill wireplumber; pkill pipewire-pulse; pkill pipewire</code></pre>
+        </section>
+
+        <section>
+            <h3>5. Verify</h3>
+
+            <pre><code>wpctl status</code></pre>
+
+            <p>
+                Under <code>Audio</code> you should see your sound card in
+                <code>Devices</code> and real outputs in
+                <code>Sinks</code>, with <code>*</code> marking the
+                default. If only <code>Dummy Output</code> is listed,
+                PipeWire cannot see your card: check the
+                <code>audio</code> group (section 3) and that
+                <code>udevd</code> is running.
+            </p>
+
+            <p>
+                Then confirm that the PulseAudio layer answers:
+            </p>
+
+            <pre><code>pactl info</code></pre>
+
+            <p>
+                The output should contain
+                <code>Server Name: PulseAudio (on PipeWire ...)</code>.
+                Finally, play a test file through PipeWire:
+            </p>
+
+            <pre><code>pw-play file.wav</code></pre>
+
+            <p>
+                Volume and mute can be adjusted with:
+            </p>
+
+            <pre><code>wpctl get-volume @DEFAULT_AUDIO_SINK@
+wpctl set-mute @DEFAULT_AUDIO_SINK@ 0
+wpctl set-volume @DEFAULT_AUDIO_SINK@ 70%</code></pre>
+        </section>
+
+        <section>
+            <h3>6. Unmute the sound card</h3>
+
+            <p>
+                Many sound cards start muted at the ALSA mixer level, which
+                <code>wpctl</code> cannot change. If the volume looks fine
+                but nothing is audible, install <code>alsa-utils</code>
+                with the <code>alsamixer</code> compattr, which is disabled
+                by default. Add it to
+                <code>/etc/lambda/package.compattrs</code>:
+            </p>
+
+            <pre><code>alsa-utils alsamixer</code></pre>
+
+            <p>
+                Then run <code>lambda install alsa-utils</code>. Without
+                the compattr the package installs, but
+                <code>alsamixer</code> is not built.
+            </p>
+
+            <p>
+                Run <code>alsamixer</code>, press <code>F6</code> to select
+                your card, and press <code>M</code> on any channel marked
+                <code>MM</code> (such as Master, Headphone or Speaker) to
+                unmute it. The same can be done without the interface:
+            </p>
+
+            <pre><code>amixer -c 0 scontrols
+amixer -c 0 sset Master unmute</code></pre>
+
+            <p>
+                While PipeWire is running it holds the sound card, so
+                <code>aplay</code> fails with <code>Resource busy</code>.
+                This is expected. Use <code>pw-play</code> or
+                <code>paplay</code> to test sound instead.
+            </p>
+        </section>
+
+        <section>
+            <h3>7. Headphones and speakers</h3>
+
+            <p>
+                WirePlumber switches the output when you plug or unplug
+                wired headphones. On many laptops, speakers and headphones
+                are a single sink (for example <code>Line Output</code>)
+                whose port changes automatically, so the default sink in
+                <code>wpctl status</code> may not move even though the
+                sound does. Play something and plug the headphones in to
+                test it.
+            </p>
+        </section>
+
+        <section>
+            <h3>8. Browsers and other applications</h3>
+
+            <p>
+                Browsers detect the audio server only when they start.
+                After starting or restarting <code>pipewire-pulse</code>,
+                close the browser completely and open it again. While
+                something is playing, this command should list the
+                application:
+            </p>
+
+            <pre><code>pactl list sink-inputs short</code></pre>
+
+            <p>
+                If the application is not listed, check that
+                <code>XDG_RUNTIME_DIR</code> is set in the shell that
+                launched it and that
+                <code>$XDG_RUNTIME_DIR/pulse/native</code> exists. If it is
+                listed but still silent, check the volume and mute state
+                of the default sink and of the tab or application itself.
+            </p>
+        </section>
+
+        <section>
+            <h3>9. Messages you can ignore</h3>
+
+            <p>
+                These messages appear in the logs of a working setup.
+            </p>
+
+            <p>
+                <code>RTKit error: org.freedesktop.DBus.Error.ServiceUnknown</code>
+                means that the RTKit service, which grants realtime
+                priority to audio threads, is not running. Audio works
+                without it.
+            </p>
+
+            <p>
+                <code>support.logind ... failed to load</code> only affects
+                seat monitoring for Bluetooth, and Vind has no logind
+                anyway.
+            </p>
+
+            <p>
+                Messages saying that the BlueZ, V4L2 or libcamera plugins
+                are missing or broken are expected, because those
+                compattrs are not enabled.
+            </p>
+        </section>
+
+        <section>
+            <h3>10. Troubleshooting</h3>
+
+            <p>
+                Only <code>Dummy Output</code> in <code>wpctl status</code>:
+                your session does not have the <code>audio</code> group
+                yet (log in again and check <code>id</code>),
+                <code>udevd</code> is not running, or PipeWire was built
+                without <code>alsa</code> and <code>udev</code>.
+            </p>
+
+            <p>
+                <code>can't connect: Host is down</code> in
+                <code>pipewire-pulse</code>: it was started before
+                <code>pipewire</code>. Keep the order from section 4.
+            </p>
+
+            <p>
+                Sound card visible but silent: the card is muted in the
+                ALSA mixer. See section 6.
+            </p>
+
+            <p>
+                <code>aplay</code> reports <code>Resource busy</code>:
+                PipeWire is holding the card. Use <code>pw-play</code>.
+            </p>
+
+            <p>
+                <code>alsamixer: not found</code>: <code>alsa-utils</code>
+                was installed without the <code>alsamixer</code> compattr.
+            </p>
+
+            <p>
+                Sound works with <code>pw-play</code> but not in the
+                browser: restart the browser after
+                <code>pipewire-pulse</code> is running and check
+                <code>XDG_RUNTIME_DIR</code> (section 8).
+            </p>
+        </section>
+
+    </main>
+
+    <nav style="justify-content: center;" class="chapter-bar chapter-bar-bottom">
+        <div class="chapter-heading">
+            <h2>PipeWire</h2>
+        </div>
+    </nav>
+
+    <footer>
+        <a href="/website/">Home</a>
+        <a href="/website/docs/">Documentation</a>
+        <a href="/website/docs/handbooks/x86_64/">x86_64 Handbook</a>
+        <a href="/website/license/">License</a>
+    </footer>
+</body>
+</html>
